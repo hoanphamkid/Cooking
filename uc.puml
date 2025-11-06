@@ -1,0 +1,62 @@
+@startuml
+title Ứng dụng Xem & Gợi ý Công Thức Nấu Ăn 🍳
+
+skinparam actorStyle awesome
+skinparam backgroundColor #F8F8F8
+skinparam usecase {
+  BackgroundColor<<user>> #CDE7FF
+  BackgroundColor<<admin>> #FFD6A5
+}
+
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Người dùng" as User
+actor "Quản trị viên" as Admin
+
+rectangle "Hệ thống Ứng dụng" {
+
+  package "Chức năng Người dùng" {
+    (Đăng ký tài khoản) as UC_Register <<user>>
+    (Đăng nhập / Đăng xuất) as UC_Login <<user>>
+    (Đổi mật khẩu) as UC_ChangePass <<user>>
+    (Xem danh sách công thức) as UC_ViewRecipes <<user>>
+    (Like bài viết) as UC_Like <<user>>
+    (Share bài viết) as UC_Share <<user>>
+    (Xem lại món đã xem) as UC_History <<user>>
+    (Random món ăn hôm nay) as UC_Random <<user>>
+    (Bình luận bài viết) as UC_Comment <<user>>
+    (Lưu bài viết yêu thích) as UC_SaveRecipe <<user>>
+  }
+
+  package "Chức năng Quản trị viên" {
+    (Quản lý người dùng) as UC_ManageUsers <<admin>>
+    (Khóa / mở tài khoản) as UC_BlockUser <<admin>>
+    (Quản lý công thức) as UC_ManageRecipes <<admin>>
+    (Xóa bài viết vi phạm) as UC_DeleteRecipe <<admin>>
+  }
+}
+
+' --- User relationships ---
+User --> UC_Register
+User --> UC_Login
+User --> UC_ChangePass
+User --> UC_ViewRecipes
+User --> UC_Like
+User --> UC_Share
+User --> UC_History
+User --> UC_Random
+User --> UC_Comment
+User --> UC_SaveRecipe
+
+' --- Admin relationships ---
+Admin --> UC_ManageUsers
+Admin --> UC_BlockUser
+Admin --> UC_ManageRecipes
+Admin --> UC_DeleteRecipe
+
+' --- Include / Extend ---
+UC_BlockUser .> UC_ManageUsers : <<include>>
+UC_DeleteRecipe .> UC_ManageRecipes : <<include>>
+
+@enduml
