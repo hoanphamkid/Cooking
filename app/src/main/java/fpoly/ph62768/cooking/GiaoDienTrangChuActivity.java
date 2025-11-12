@@ -4,6 +4,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -11,17 +14,21 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import fpoly.ph62768.cooking.RecipeCollectionActivity.CollectionType;
 import fpoly.ph62768.cooking.auth.UserAccount;
 import fpoly.ph62768.cooking.auth.UserAccountManager;
 import fpoly.ph62768.cooking.data.RecipeRepository;
@@ -42,12 +49,26 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
     private String currentUserEmail = "";
     private String currentUserName = "";
 
+    private DrawerLayout drawerLayout;
+    private NavigationView navigationView;
+    private UserAccountManager accountManager;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.giao_dien_trang_chu);
 
+        accountManager = new UserAccountManager(this);
+        drawerLayout = findViewById(R.id.home_drawer_layout);
+        navigationView = findViewById(R.id.home_navigation_view);
+        ImageButton menuButton = findViewById(R.id.home_menu_button);
+
+        menuButton.setOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));
+        navigationView.setNavigationItemSelectedListener(this::onNavigationItemSelected);
+        navigationView.setCheckedItem(R.id.nav_home);
+
         restoreSession(getIntent());
+        updateDrawerHeader();
 
         adapter = new RecipeAdapter();
         allRecipes.addAll(RecipeRepository.getInstance().getRecipes());
@@ -87,9 +108,15 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
 
         selectTab(TabType.HOME);
 
-        fab.setOnClickListener(v ->
-                Toast.makeText(this, "Tính năng đang phát triển", Toast.LENGTH_SHORT).show()
-        );
+        fab.setOnClickListener(v -> {
+            if (currentUserEmail == null || currentUserEmail.trim().isEmpty()) {
+                Toast.makeText(this, R.string.create_recipe_no_user, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Intent createIntent = new Intent(this, DangBaiActivity.class);
+            createIntent.putExtra(DangBaiActivity.EXTRA_USER_EMAIL, currentUserEmail);
+            startActivity(createIntent);
+        });
 
         chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (checkedIds.isEmpty()) {
@@ -123,6 +150,81 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
         super.onResume();
         selectTab(TabType.HOME);
         restoreSession(getIntent());
+        updateDrawerHeader();
+    }
+
+    private boolean onNavigationItemSelected(MenuItem item) {
+        drawerLayout.closeDrawer(GravityCompat.START);
+        int id = item.getItemId();
+        Intent intent;
+        if (id == R.id.nav_home) {
+            return true;
+        } else if (id == R.id.nav_profile) {
+            intent = new Intent(this, GiaoDienHoSoActivity.class);
+            intent.putExtra(EXTRA_USER_EMAIL, currentUserEmail);
+            intent.putExtra(EXTRA_USER_NAME, currentUserName);
+            startActivity(intent);
+            return true;
+        } else if (id == R.id.nav_pending) {
+            Intent pendingIntent = new Intent(this, DanhSachChoDuyetActivity.class);
+            pendingIntent.putExtra(DanhSachChoDuyetActivity.EXTRA_USER_EMAIL, currentUserEmail);
+            startActivity(pendingIntent);
+            return true;
+        } else if (id == R.id.nav_saved) {
+            openCollection(RecipeCollectionActivity.CollectionType.SAVED);
+            return true;
+        } else if (id == R.id.nav_history) {
+            openCollection(RecipeCollectionActivity.CollectionType.HISTORY);
+            return true;
+        } else if (id == R.id.nav_favorite) {
+            openCollection(RecipeCollectionActivity.CollectionType.FAVORITE);
+            return true;
+        } else if (id == R.id.nav_settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
+            return true;
+        } else if (id == R.id.nav_help) {
+            startActivity(new Intent(this, HelpActivity.class));
+            return true;
+        } else if (id == R.id.nav_logout) {
+            accountManager.clearCurrentUser(this);
+            intent = new Intent(this, GiaoDienChinhActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            finish();
+            return true;
+        } else {
+            return true;
+        }
+    }
+
+    private void updateDrawerHeader() {
+        if (navigationView == null) {
+            return;
+        }
+        View headerView = navigationView.getHeaderView(0);
+        if (headerView == null) {
+            return;
+        }
+        TextView nameText = headerView.findViewById(R.id.nav_header_name);
+        TextView emailText = headerView.findViewById(R.id.nav_header_email);
+        ImageView avatar = headerView.findViewById(R.id.nav_header_avatar);
+
+        String displayName = currentUserName != null && !currentUserName.trim().isEmpty()
+                ? currentUserName
+                : getString(R.string.profile_user_name);
+        String displayEmail = currentUserEmail != null && !currentUserEmail.trim().isEmpty()
+                ? currentUserEmail
+                : getString(R.string.profile_user_email);
+
+        nameText.setText(displayName);
+        emailText.setText(displayEmail);
+        avatar.setImageResource(R.drawable.ic_profile_placeholder);
+    }
+
+    private void openCollection(CollectionType type) {
+        Intent intent = new Intent(this, RecipeCollectionActivity.class);
+        intent.putExtra(RecipeCollectionActivity.EXTRA_COLLECTION_TYPE, type.name());
+        startActivity(intent);
     }
 
     private void applyFilters() {
@@ -183,7 +285,6 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
     }
 
     private void restoreSession(Intent intent) {
-        UserAccountManager accountManager = new UserAccountManager(this);
         if (intent != null) {
             String email = intent.getStringExtra(EXTRA_USER_EMAIL);
             String name = intent.getStringExtra(EXTRA_USER_NAME);
@@ -209,4 +310,3 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
         }
     }
 }
-

@@ -139,8 +139,8 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:isIndicator="true"
-                            android:numStars="1"
-                            android:stepSize="0.1"
+                            android:numStars="5"
+                            android:stepSize="0.5"
                             android:progressTint="#FFB74D"
                             android:secondaryProgressTint="#FFB74D"
                             android:progressBackgroundTint="#FFE8D9" />
@@ -156,6 +156,82 @@
                     </LinearLayout>
 
                 </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/detail_actions_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/detail_save_button"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:text="@string/detail_save"
+                        android:textColor="#FF7A33"
+                        app:icon="@drawable/ic_profile_saved"
+                        app:iconGravity="textStart"
+                        app:iconPadding="12dp"
+                        app:iconTint="#FF7A33"
+                        app:strokeColor="#FF7A33"
+                        app:strokeWidth="1dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/detail_favorite_button"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:text="@string/detail_favorite"
+                        android:textColor="#FF7A33"
+                        app:icon="@drawable/ic_profile_favorite"
+                        app:iconGravity="textStart"
+                        app:iconPadding="12dp"
+                        app:iconTint="#FF7A33"
+                        app:strokeColor="#FF7A33"
+                        app:strokeWidth="1dp" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/detail_user_rating_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/detail_user_rating_title"
+                    android:textColor="@android:color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <RatingBar
+                    android:id="@+id/detail_user_rating_bar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:numStars="5"
+                    android:stepSize="1.0"
+                    android:progressTint="#FFB74D"
+                    android:secondaryProgressTint="#FFB74D"
+                    android:progressBackgroundTint="#FFE8D9" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/detail_user_rating_button"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/detail_user_rating_button"
+                    app:backgroundTint="#FF7A33"
+                    app:icon="@drawable/ic_nav_add"
+                    app:iconGravity="textStart"
+                    app:iconPadding="12dp"
+                    app:iconTint="@android:color/white" />
 
                 <TextView
                     android:id="@+id/detail_steps_title"
@@ -174,6 +250,86 @@
                     android:layout_marginTop="16dp"
                     android:nestedScrollingEnabled="false"
                     tools:listitem="@layout/item_recipe_step" />
+
+                <TextView
+                    android:id="@+id/detail_feedback_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/detail_feedback_title"
+                    android:textColor="@android:color/black"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/detail_feedback_recycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:nestedScrollingEnabled="false"
+                    tools:listitem="@layout/item_recipe_feedback" />
+
+                <LinearLayout
+                    android:id="@+id/detail_feedback_form"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:background="@drawable/bg_feedback_card">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/detail_feedback_add_title"
+                        android:textColor="@android:color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <RatingBar
+                        android:id="@+id/detail_feedback_rating"
+                        style="@style/Widget.AppCompat.RatingBar.Small"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:numStars="5"
+                        android:stepSize="0.5"
+                        android:progressTint="#FFB74D"
+                        android:secondaryProgressTint="#FFB74D"
+                        android:progressBackgroundTint="#FFE8D9" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/detail_feedback_input_layout"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:hint="@string/detail_feedback_hint"
+                        app:boxStrokeColor="#FF7A33"
+                        app:hintTextColor="#FF7A33">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/detail_feedback_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textMultiLine"
+                            android:maxLines="4" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/detail_feedback_submit"
+                        style="@style/Widget.MaterialComponents.Button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:layout_gravity="end"
+                        android:text="@string/detail_feedback_submit"
+                        app:backgroundTint="#FF7A33"
+                        app:icon="@drawable/ic_nav_add"
+                        app:iconGravity="textStart"
+                        app:iconPadding="12dp"
+                        app:iconTint="@android:color/white" />
+                </LinearLayout>
 
             </LinearLayout>
         </LinearLayout>

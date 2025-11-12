@@ -15,6 +15,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
+import java.util.Locale;
+
 import fpoly.ph62768.cooking.auth.UserAccount;
 import fpoly.ph62768.cooking.auth.UserAccountManager;
 
@@ -31,6 +33,7 @@ public class GiaoDienChinhActivity extends AppCompatActivity {
 
         UserAccountManager accountManager = new UserAccountManager(this);
         accountManager.ensureAccount("Người dùng mẫu", "demo@candycancook.com", UserAccountManager.DEFAULT_PASSWORD);
+        accountManager.ensureAccount(getString(R.string.admin_default_name), getString(R.string.admin_default_email), "123");
 
         TextView registerText = findViewById(R.id.register_text);
         String prompt = getString(R.string.login_register_prompt);
@@ -88,11 +91,19 @@ public class GiaoDienChinhActivity extends AppCompatActivity {
 
             accountManager.setCurrentUser(this, email);
 
+            String normalizedEmail = email.trim().toLowerCase(Locale.getDefault());
+            if (normalizedEmail.equals(getString(R.string.admin_default_email))) {
+                Intent adminIntent = new Intent(this, ManHinhQuanTriActivity.class);
+                adminIntent.putExtra(GiaoDienTrangChuActivity.EXTRA_USER_EMAIL, email);
+                adminIntent.putExtra(GiaoDienTrangChuActivity.EXTRA_USER_NAME, account.getName());
+                startActivity(adminIntent);
+            } else {
+                Intent intent = new Intent(this, GiaoDienTrangChuActivity.class);
+                intent.putExtra(GiaoDienTrangChuActivity.EXTRA_USER_EMAIL, email);
+                intent.putExtra(GiaoDienTrangChuActivity.EXTRA_USER_NAME, account.getName());
+                startActivity(intent);
+            }
             Toast.makeText(this, R.string.login_success_message, Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(this, GiaoDienTrangChuActivity.class);
-            intent.putExtra(GiaoDienTrangChuActivity.EXTRA_USER_EMAIL, email);
-            intent.putExtra(GiaoDienTrangChuActivity.EXTRA_USER_NAME, account.getName());
-            startActivity(intent);
             finish();
         });
     }

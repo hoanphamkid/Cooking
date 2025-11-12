@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.bumptech.glide.Glide;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import fpoly.ph62768.cooking.RecipeCollectionActivity.CollectionType;
 import fpoly.ph62768.cooking.auth.UserAccount;
 import fpoly.ph62768.cooking.auth.UserAccountManager;
 
@@ -82,6 +83,12 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
         LinearLayout tabHot = findViewById(R.id.profile_tab_hot);
         LinearLayout tabRandom = findViewById(R.id.profile_tab_random);
         LinearLayout tabProfile = findViewById(R.id.profile_tab_profile);
+        LinearLayout pendingRow = findViewById(R.id.profile_pending_row);
+        LinearLayout savedRow = findViewById(R.id.profile_saved_row);
+        LinearLayout historyRow = findViewById(R.id.profile_history_row);
+        LinearLayout favoriteRow = findViewById(R.id.profile_favorite_row);
+        LinearLayout settingsRow = findViewById(R.id.profile_settings_row);
+        LinearLayout helpRow = findViewById(R.id.profile_help_row);
 
         tabHome.setOnClickListener(v -> {
             selectBottomTab(ProfileTab.HOME);
@@ -104,6 +111,21 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
         });
 
         tabProfile.setOnClickListener(v -> selectBottomTab(ProfileTab.PROFILE));
+
+        pendingRow.setOnClickListener(v -> {
+            Intent pendingIntent = new Intent(this, DanhSachChoDuyetActivity.class);
+            pendingIntent.putExtra(DanhSachChoDuyetActivity.EXTRA_USER_EMAIL, currentUserEmail);
+            startActivity(pendingIntent);
+        });
+        savedRow.setOnClickListener(v -> openCollection(CollectionType.SAVED));
+        historyRow.setOnClickListener(v -> openCollection(CollectionType.HISTORY));
+        favoriteRow.setOnClickListener(v -> openCollection(CollectionType.FAVORITE));
+        settingsRow.setOnClickListener(v ->
+                startActivity(new Intent(this, SettingsActivity.class))
+        );
+        helpRow.setOnClickListener(v ->
+                startActivity(new Intent(this, HelpActivity.class))
+        );
 
         selectBottomTab(ProfileTab.PROFILE);
     }
@@ -128,21 +150,6 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
     }
 
     private void setupRows(UserAccountManager accountManager) {
-        int[] infoRowIds = {
-                R.id.profile_pending_row,
-                R.id.profile_saved_row,
-                R.id.profile_history_row,
-                R.id.profile_favorite_row,
-                R.id.profile_settings_row,
-                R.id.profile_help_row
-        };
-        for (int rowId : infoRowIds) {
-            LinearLayout row = findViewById(rowId);
-            row.setOnClickListener(v ->
-                    Toast.makeText(this, "Tính năng đang phát triển", Toast.LENGTH_SHORT).show()
-            );
-        }
-
         LinearLayout logoutRow = findViewById(R.id.profile_logout_row);
         logoutRow.setOnClickListener(v -> {
             accountManager.clearCurrentUser(this);
@@ -151,6 +158,12 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
             startActivity(intent);
             finish();
         });
+    }
+
+    private void openCollection(CollectionType type) {
+        Intent intent = new Intent(this, RecipeCollectionActivity.class);
+        intent.putExtra(RecipeCollectionActivity.EXTRA_COLLECTION_TYPE, type.name());
+        startActivity(intent);
     }
 }
 

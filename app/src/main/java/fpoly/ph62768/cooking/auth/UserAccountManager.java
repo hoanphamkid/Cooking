@@ -8,6 +8,9 @@ import androidx.annotation.NonNull;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class UserAccountManager {
 
     private static final String PREFS_NAME = "user_accounts";
@@ -27,9 +30,12 @@ public class UserAccountManager {
         }
         UserAccount account = getAccount(normalizedEmail);
         if (account == null) {
-            account = new UserAccount("", DEFAULT_PASSWORD);
+            account = new UserAccount("", DEFAULT_PASSWORD, System.currentTimeMillis());
         } else {
             account.setPassword(DEFAULT_PASSWORD);
+            if (account.getCreatedAt() == 0L) {
+                account.setCreatedAt(System.currentTimeMillis());
+            }
         }
         saveAccountInternal(normalizedEmail, account);
     }
@@ -39,7 +45,7 @@ public class UserAccountManager {
         if (normalizedEmail.isEmpty()) {
             return;
         }
-        UserAccount account = new UserAccount(name, password);
+        UserAccount account = new UserAccount(name, password, System.currentTimeMillis());
         saveAccountInternal(normalizedEmail, account);
     }
 
@@ -57,13 +63,11 @@ public class UserAccountManager {
             if (account == null) {
                 return null;
             }
-            if (account.getName() == null) {
-                account.setName("");
-            }
+            ensureDefaults(account);
             return account;
         } catch (JsonSyntaxException ex) {
             // legacy format: password stored as plain string
-            return new UserAccount("", raw);
+            return new UserAccount("", raw, System.currentTimeMillis());
         }
     }
 
@@ -80,6 +84,40 @@ public class UserAccountManager {
         if (!sharedPreferences.contains(normalizedEmail)) {
             saveAccount(name, email, password);
         }
+    }
+
+    public Map<String, UserAccount> getAllAccounts() {
+        Map<String, ?> all = sharedPreferences.getAll();
+        Map<String, UserAccount> result = new HashMap<>();
+        for (Map.Entry<String, ?> entry : all.entrySet()) {
+            Object value = entry.getValue();
+            if (!(value instanceof String)) {
+                continue;
+            }
+            String raw = (String) value;
+            try {
+                UserAccount account = gson.fromJson(raw, UserAccount.class);
+                if (account != null) {
+                    ensureDefaults(account);
+                    result.put(entry.getKey(), account);
+                }
+            } catch (JsonSyntaxException ignore) {
+                UserAccount legacy = new UserAccount();
+                legacy.setName("");
+                legacy.setPassword(raw);
+                legacy.setCreatedAt(System.currentTimeMillis());
+                result.put(entry.getKey(), legacy);
+            }
+        }
+        return result;
+    }
+
+    public void removeAccount(@NonNull String email) {
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail.isEmpty()) {
+            return;
+        }
+        sharedPreferences.edit().remove(normalizedEmail).apply();
     }
 
     private void saveAccountInternal(String normalizedEmail, UserAccount account) {
@@ -109,6 +147,18 @@ public class UserAccountManager {
 
     private String normalizeEmail(String email) {
         return email == null ? "" : email.trim().toLowerCase();
+    }
+
+    private void ensureDefaults(UserAccount account) {
+        if (account.getName() == null) {
+            account.setName("");
+        }
+        if (account.getPassword() == null) {
+            account.setPassword(DEFAULT_PASSWORD);
+        }
+        if (account.getCreatedAt() == 0L) {
+            account.setCreatedAt(System.currentTimeMillis());
+        }
     }
 }
 
