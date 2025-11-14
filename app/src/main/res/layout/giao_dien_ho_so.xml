@@ -302,6 +302,19 @@
                             android:src="@drawable/ic_chevron_right" />
                     </LinearLayout>
 
+                    <TextView
+                        android:id="@+id/profile_pending_notice"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_marginEnd="12dp"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginBottom="8dp"
+                        android:textColor="#FF7A33"
+                        android:textSize="12sp"
+                        android:visibility="gone"
+                        tools:text="Bạn có 1 bài đang chờ duyệt. Nhấn để xem chi tiết." />
+
                     <View style="@style/ProfileDivider" />
 
                     <LinearLayout

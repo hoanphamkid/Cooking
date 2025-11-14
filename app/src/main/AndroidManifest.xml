@@ -60,12 +60,6 @@
         <activity
             android:name=".ManHinhQuanTriActivity"
             android:exported="false" />
-        <activity
-            android:name=".QuanLyNguoiDungActivity"
-            android:exported="false" />
-        <activity
-            android:name=".QuanLyCongThucActivity"
-            android:exported="false" />
     </application>
 
 </manifest>

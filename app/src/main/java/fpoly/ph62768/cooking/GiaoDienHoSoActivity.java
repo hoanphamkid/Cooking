@@ -2,6 +2,7 @@ package fpoly.ph62768.cooking;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -16,11 +17,15 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import fpoly.ph62768.cooking.RecipeCollectionActivity.CollectionType;
 import fpoly.ph62768.cooking.auth.UserAccount;
 import fpoly.ph62768.cooking.auth.UserAccountManager;
+import fpoly.ph62768.cooking.data.BaiChoDuyetStore;
 
 public class GiaoDienHoSoActivity extends AppCompatActivity {
 
     private String currentUserEmail = "";
     private String currentUserName = "";
+    private BaiChoDuyetStore baiChoDuyetStore;
+    private TextView pendingBadgeView;
+    private TextView pendingNoticeView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,6 +77,7 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
             emailText.setText(currentUserEmail);
         }
 
+        baiChoDuyetStore = new BaiChoDuyetStore(this);
         setupRows(accountManager);
 
         FloatingActionButton fab = findViewById(R.id.profile_fab);
@@ -89,6 +95,8 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
         LinearLayout favoriteRow = findViewById(R.id.profile_favorite_row);
         LinearLayout settingsRow = findViewById(R.id.profile_settings_row);
         LinearLayout helpRow = findViewById(R.id.profile_help_row);
+        pendingBadgeView = findViewById(R.id.profile_pending_badge);
+        pendingNoticeView = findViewById(R.id.profile_pending_notice);
 
         tabHome.setOnClickListener(v -> {
             selectBottomTab(ProfileTab.HOME);
@@ -115,8 +123,12 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
         pendingRow.setOnClickListener(v -> {
             Intent pendingIntent = new Intent(this, DanhSachChoDuyetActivity.class);
             pendingIntent.putExtra(DanhSachChoDuyetActivity.EXTRA_USER_EMAIL, currentUserEmail);
+            pendingIntent.putExtra(DanhSachChoDuyetActivity.EXTRA_FILTER_EMAIL, currentUserEmail);
             startActivity(pendingIntent);
         });
+        if (pendingNoticeView != null) {
+            pendingNoticeView.setOnClickListener(v -> pendingRow.performClick());
+        }
         savedRow.setOnClickListener(v -> openCollection(CollectionType.SAVED));
         historyRow.setOnClickListener(v -> openCollection(CollectionType.HISTORY));
         favoriteRow.setOnClickListener(v -> openCollection(CollectionType.FAVORITE));
@@ -127,7 +139,14 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
                 startActivity(new Intent(this, HelpActivity.class))
         );
 
+        updatePendingState();
         selectBottomTab(ProfileTab.PROFILE);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updatePendingState();
     }
 
     private enum ProfileTab {
@@ -164,6 +183,26 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
         Intent intent = new Intent(this, RecipeCollectionActivity.class);
         intent.putExtra(RecipeCollectionActivity.EXTRA_COLLECTION_TYPE, type.name());
         startActivity(intent);
+    }
+
+    private void updatePendingState() {
+        if (baiChoDuyetStore == null || currentUserEmail == null) {
+            return;
+        }
+        int pendingCount = baiChoDuyetStore.demSoBaiCho(currentUserEmail);
+        if (pendingBadgeView != null) {
+            pendingBadgeView.setText(String.valueOf(pendingCount));
+            pendingBadgeView.setVisibility(View.VISIBLE);
+            pendingBadgeView.setAlpha(pendingCount > 0 ? 1f : 0.4f);
+        }
+        if (pendingNoticeView != null) {
+            if (pendingCount > 0) {
+                pendingNoticeView.setText(getString(R.string.profile_pending_notice, pendingCount));
+                pendingNoticeView.setVisibility(View.VISIBLE);
+            } else {
+                pendingNoticeView.setVisibility(View.GONE);
+            }
+        }
     }
 }
 

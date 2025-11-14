@@ -10,7 +10,6 @@ import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -43,11 +42,11 @@ public class BaiChoDuyetStore {
         String key = taoKey(email);
         String raw = prefs.getString(key, null);
         if (raw == null || raw.trim().isEmpty()) {
-            return Collections.emptyList();
+            return new ArrayList<>();
         }
         List<BaiChoDuyet> recipes = gson.fromJson(raw, listType);
         if (recipes == null) {
-            return Collections.emptyList();
+            return new ArrayList<>();
         }
         return new ArrayList<>(recipes);
     }
@@ -71,9 +70,12 @@ public class BaiChoDuyetStore {
                         item.getTenMon(),
                         item.getThoiGianNau(),
                         item.getMoTa(),
+                        item.getAnhMon(),
+                        item.getCongThucChiTiet(),
                         item.getThoiGianTao(),
                         item.getDiemDanhGia(),
-                        trangThai
+                        trangThai,
+                        false
                 ));
                 changed = true;
             } else {

@@ -93,6 +93,42 @@
                 android:maxLines="5" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/dang_bai_anh_layout"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="@string/create_recipe_image_hint"
+            app:boxStrokeColor="#FF7A33"
+            app:hintTextColor="#FF7A33">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/dang_bai_anh_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textUri" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/dang_bai_cong_thuc_layout"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="@string/create_recipe_steps_hint"
+            app:boxStrokeColor="#FF7A33"
+            app:hintTextColor="#FF7A33">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/dang_bai_cong_thuc_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine"
+                android:minLines="4"
+                android:maxLines="8" />
+        </com.google.android.material.textfield.TextInputLayout>
+
         <TextView
             android:id="@+id/dang_bai_danh_gia_label"
             android:layout_width="wrap_content"

@@ -19,14 +19,21 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
 
 import fpoly.ph62768.cooking.RecipeCollectionActivity.CollectionType;
 import fpoly.ph62768.cooking.auth.UserAccount;
@@ -34,12 +41,14 @@ import fpoly.ph62768.cooking.auth.UserAccountManager;
 import fpoly.ph62768.cooking.data.RecipeRepository;
 import fpoly.ph62768.cooking.model.Recipe;
 import fpoly.ph62768.cooking.model.RecipeCategory;
+import fpoly.ph62768.cooking.model.RecipeStep;
 import fpoly.ph62768.cooking.ui.RecipeAdapter;
 
 public class GiaoDienTrangChuActivity extends AppCompatActivity {
 
     public static final String EXTRA_USER_EMAIL = "extra_user_email";
     public static final String EXTRA_USER_NAME = "extra_user_name";
+    private static final int REQUEST_CREATE_RECIPE = 101;
 
     private RecipeAdapter adapter;
     private final List<Recipe> allRecipes = new ArrayList<>();
@@ -52,6 +61,20 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
     private DrawerLayout drawerLayout;
     private NavigationView navigationView;
     private UserAccountManager accountManager;
+    private TextInputLayout searchLayout;
+    private View categoryContainer;
+    private View randomFilterCard;
+    private TextInputEditText randomIngredientInput;
+    private ChipGroup randomMoodChipGroup;
+    private MaterialButton randomClearButton;
+    private TextView randomResultLabel;
+    private TextView randomEmptyView;
+
+    private String currentIngredient = "";
+    private MoodFilter currentMood = MoodFilter.NONE;
+    private TabType currentTab = TabType.HOME;
+    private final Map<String, String> recipeSearchIndex = new HashMap<>();
+    private final Random randomGenerator = new Random();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -71,8 +94,6 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
         updateDrawerHeader();
 
         adapter = new RecipeAdapter();
-        allRecipes.addAll(RecipeRepository.getInstance().getRecipes());
-
         RecyclerView recyclerView = findViewById(R.id.recipe_recycler_view);
         recyclerView.setLayoutManager(new GridLayoutManager(this, 2));
         recyclerView.setAdapter(adapter);
@@ -82,22 +103,37 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
             startActivity(detailIntent);
         });
 
+        searchLayout = findViewById(R.id.home_search_layout);
         TextInputEditText searchInput = findViewById(R.id.home_search_input);
         ChipGroup chipGroup = findViewById(R.id.category_chip_group);
+        categoryContainer = findViewById(R.id.category_container);
+        randomFilterCard = findViewById(R.id.random_filter_card);
+        randomIngredientInput = findViewById(R.id.random_ingredient_input);
+        randomMoodChipGroup = findViewById(R.id.random_mood_chip_group);
+        randomClearButton = findViewById(R.id.random_clear_button);
+        randomResultLabel = findViewById(R.id.random_result_label);
+        randomEmptyView = findViewById(R.id.random_empty_view);
+
         FloatingActionButton fab = findViewById(R.id.home_fab);
         LinearLayout tabHome = findViewById(R.id.tab_home);
         LinearLayout tabHot = findViewById(R.id.tab_hot);
         LinearLayout tabRandom = findViewById(R.id.tab_random);
         LinearLayout tabProfile = findViewById(R.id.tab_profile);
 
-        tabHome.setOnClickListener(v -> selectTab(TabType.HOME));
+        tabHome.setOnClickListener(v -> {
+            selectTab(TabType.HOME);
+            setRandomMode(false);
+            applyFilters();
+        });
         tabHot.setOnClickListener(v -> {
             selectTab(TabType.HOT);
+            setRandomMode(false);
             showComingSoon();
         });
         tabRandom.setOnClickListener(v -> {
             selectTab(TabType.RANDOM);
-            showComingSoon();
+            setRandomMode(true);
+            applyFilters();
         });
         tabProfile.setOnClickListener(v -> {
             Intent profileIntent = new Intent(this, GiaoDienHoSoActivity.class);
@@ -106,8 +142,6 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
             startActivity(profileIntent);
         });
 
-        selectTab(TabType.HOME);
-
         fab.setOnClickListener(v -> {
             if (currentUserEmail == null || currentUserEmail.trim().isEmpty()) {
                 Toast.makeText(this, R.string.create_recipe_no_user, Toast.LENGTH_SHORT).show();
@@ -115,7 +149,7 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
             }
             Intent createIntent = new Intent(this, DangBaiActivity.class);
             createIntent.putExtra(DangBaiActivity.EXTRA_USER_EMAIL, currentUserEmail);
-            startActivity(createIntent);
+            startActivityForResult(createIntent, REQUEST_CREATE_RECIPE);
         });
 
         chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
@@ -128,29 +162,103 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
             applyFilters();
         });
 
-        searchInput.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+        if (searchInput != null) {
+            searchInput.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
 
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                currentQuery = s != null ? s.toString() : "";
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    currentQuery = s != null ? s.toString() : "";
+                    applyFilters();
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) { }
+            });
+        }
+
+        if (randomIngredientInput != null) {
+            randomIngredientInput.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    currentIngredient = s != null ? s.toString() : "";
+                    applyFilters();
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) { }
+            });
+        }
+
+        if (randomMoodChipGroup != null) {
+            randomMoodChipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+                if (checkedIds.isEmpty()) {
+                    currentMood = MoodFilter.NONE;
+                } else {
+                    currentMood = mapMoodChipToFilter(checkedIds.get(0));
+                }
                 applyFilters();
-            }
+            });
+        }
 
-            @Override
-            public void afterTextChanged(Editable s) { }
-        });
+        if (randomClearButton != null) {
+            randomClearButton.setOnClickListener(v -> {
+                currentIngredient = "";
+                currentMood = MoodFilter.NONE;
+                if (randomIngredientInput != null) {
+                    randomIngredientInput.setText("");
+                }
+                if (randomMoodChipGroup != null) {
+                    randomMoodChipGroup.clearCheck();
+                }
+                applyFilters();
+            });
+        }
 
+        reloadRecipes();
+        selectTab(TabType.HOME);
+        setRandomMode(false);
         applyFilters();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CREATE_RECIPE && resultCode == RESULT_OK) {
+            String recipeName = data != null ? data.getStringExtra("extra_pending_recipe_name") : null;
+            if (recipeName == null || recipeName.trim().isEmpty()) {
+                recipeName = getString(R.string.pending_status_pending);
+            }
+            View container = findViewById(R.id.home_pending_status_container);
+            if (container != null) {
+                container.setVisibility(View.VISIBLE);
+                TextView messageView = container.findViewById(R.id.home_pending_status_message);
+                if (messageView != null) {
+                    messageView.setText(getString(R.string.pending_user_notice, recipeName));
+                }
+            } else {
+                Toast.makeText(this, getString(R.string.pending_user_notice, recipeName), Toast.LENGTH_LONG).show();
+            }
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        selectTab(TabType.HOME);
         restoreSession(getIntent());
         updateDrawerHeader();
+        reloadRecipes();
+        if (currentTab == TabType.RANDOM) {
+            setRandomMode(true);
+        } else {
+            selectTab(TabType.HOME);
+            setRandomMode(false);
+        }
+        applyFilters();
     }
 
     private boolean onNavigationItemSelected(MenuItem item) {
@@ -229,15 +337,36 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
 
     private void applyFilters() {
         List<Recipe> filtered = new ArrayList<>();
-        Locale locale = Locale.getDefault();
-        String queryLower = currentQuery.toLowerCase(locale);
-        for (Recipe recipe : allRecipes) {
-            boolean matchesCategory = selectedCategory == RecipeCategory.ALL || recipe.getCategory() == selectedCategory;
-            boolean matchesQuery = currentQuery.isEmpty() ||
-                    recipe.getName().toLowerCase(locale).contains(queryLower);
-            if (matchesCategory && matchesQuery) {
-                filtered.add(recipe);
+        if (currentTab == TabType.RANDOM) {
+            String normalizedIngredient = normalizeText(currentIngredient);
+            boolean hasIngredientFilter = !normalizedIngredient.isEmpty();
+            boolean hasMoodFilter = currentMood != MoodFilter.NONE;
+
+            if (!hasIngredientFilter && !hasMoodFilter) {
+                List<Recipe> shuffled = new ArrayList<>(allRecipes);
+                Collections.shuffle(shuffled, randomGenerator);
+                int limit = Math.min(6, shuffled.size());
+                filtered.addAll(shuffled.subList(0, limit));
+            } else {
+                for (Recipe recipe : allRecipes) {
+                    if (matchesIngredient(recipe, normalizedIngredient) && matchesMood(recipe)) {
+                        filtered.add(recipe);
+                    }
+                }
             }
+            updateRandomResultState(hasIngredientFilter || hasMoodFilter, filtered.isEmpty());
+        } else {
+            Locale locale = Locale.getDefault();
+            String queryLower = currentQuery.toLowerCase(locale);
+            for (Recipe recipe : allRecipes) {
+                boolean matchesCategory = selectedCategory == RecipeCategory.ALL || recipe.getCategory() == selectedCategory;
+                boolean matchesQuery = currentQuery.isEmpty() ||
+                        recipe.getName().toLowerCase(locale).contains(queryLower);
+                if (matchesCategory && matchesQuery) {
+                    filtered.add(recipe);
+                }
+            }
+            updateRandomResultState(false, false);
         }
         adapter.submitList(filtered);
     }
@@ -263,7 +392,12 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
         HOME, HOT, RANDOM, PROFILE
     }
 
+    private enum MoodFilter {
+        NONE, HAPPY, RELAX, HEALTHY, WARM
+    }
+
     private void selectTab(TabType tabType) {
+        currentTab = tabType;
         updateTabState(R.id.tab_home, R.id.tab_home_icon, R.id.tab_home_label, tabType == TabType.HOME);
         updateTabState(R.id.tab_hot, R.id.tab_hot_icon, R.id.tab_hot_label, tabType == TabType.HOT);
         updateTabState(R.id.tab_random, R.id.tab_random_icon, R.id.tab_random_label, tabType == TabType.RANDOM);
@@ -278,6 +412,138 @@ public class GiaoDienTrangChuActivity extends AppCompatActivity {
         icon.setColorFilter(color);
         label.setTextColor(color);
         container.setSelected(selected);
+    }
+
+    private void setRandomMode(boolean enabled) {
+        if (searchLayout != null) {
+            searchLayout.setVisibility(enabled ? View.GONE : View.VISIBLE);
+        }
+        if (categoryContainer != null) {
+            categoryContainer.setVisibility(enabled ? View.GONE : View.VISIBLE);
+        }
+        if (randomFilterCard != null) {
+            randomFilterCard.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        }
+        if (!enabled) {
+            if (randomResultLabel != null) {
+                randomResultLabel.setVisibility(View.GONE);
+            }
+            if (randomEmptyView != null) {
+                randomEmptyView.setVisibility(View.GONE);
+            }
+            currentIngredient = "";
+            currentMood = MoodFilter.NONE;
+            if (randomIngredientInput != null) {
+                randomIngredientInput.setText("");
+            }
+            if (randomMoodChipGroup != null) {
+                randomMoodChipGroup.clearCheck();
+            }
+        }
+    }
+
+    private MoodFilter mapMoodChipToFilter(int chipId) {
+        if (chipId == R.id.random_chip_happy) {
+            return MoodFilter.HAPPY;
+        } else if (chipId == R.id.random_chip_relax) {
+            return MoodFilter.RELAX;
+        } else if (chipId == R.id.random_chip_healthy) {
+            return MoodFilter.HEALTHY;
+        } else if (chipId == R.id.random_chip_warm) {
+            return MoodFilter.WARM;
+        }
+        return MoodFilter.NONE;
+    }
+
+    private boolean matchesIngredient(Recipe recipe, String normalizedIngredient) {
+        if (normalizedIngredient == null || normalizedIngredient.isEmpty()) {
+            return true;
+        }
+        String searchable = getSearchableText(recipe);
+        String[] tokens = normalizedIngredient.split("[,;\\s]+");
+        for (String token : tokens) {
+            if (token.isEmpty()) {
+                continue;
+            }
+            if (searchable.contains(token)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean matchesMood(Recipe recipe) {
+        switch (currentMood) {
+            case HAPPY:
+                return recipe.getCategory() == RecipeCategory.DESSERT
+                        || recipe.getCategory() == RecipeCategory.DRINK;
+            case RELAX:
+                return recipe.getCategory() == RecipeCategory.DRINK
+                        || recipe.getCategory() == RecipeCategory.LOW_CAL;
+            case HEALTHY:
+                return recipe.getCategory() == RecipeCategory.HEALTHY
+                        || recipe.getCategory() == RecipeCategory.LOW_CAL;
+            case WARM:
+                return recipe.getCategory() == RecipeCategory.TRADITIONAL
+                        || recipe.getCategory() == RecipeCategory.QUICK;
+            case NONE:
+            default:
+                return true;
+        }
+    }
+
+    private void updateRandomResultState(boolean hasActiveFilters, boolean isEmpty) {
+        if (randomResultLabel != null) {
+            if (currentTab == TabType.RANDOM) {
+                randomResultLabel.setVisibility(View.VISIBLE);
+                randomResultLabel.setText(getString(hasActiveFilters
+                        ? R.string.random_result_title_filter
+                        : R.string.random_result_title_default));
+            } else {
+                randomResultLabel.setVisibility(View.GONE);
+            }
+        }
+        if (randomEmptyView != null) {
+            if (currentTab == TabType.RANDOM && isEmpty) {
+                randomEmptyView.setVisibility(View.VISIBLE);
+                randomEmptyView.setText(R.string.random_result_empty);
+            } else {
+                randomEmptyView.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    private String getSearchableText(Recipe recipe) {
+        String cached = recipeSearchIndex.get(recipe.getId());
+        if (cached != null) {
+            return cached;
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append(recipe.getName()).append(' ');
+        builder.append(recipe.getDescription()).append(' ');
+        for (RecipeStep step : recipe.getSteps()) {
+            builder.append(step.getTitle()).append(' ');
+            builder.append(step.getDescription()).append(' ');
+        }
+        String normalized = normalizeText(builder.toString());
+        recipeSearchIndex.put(recipe.getId(), normalized);
+        return normalized;
+    }
+
+    private String normalizeText(String input) {
+        if (input == null) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        return normalized.toLowerCase(Locale.getDefault()).trim();
+    }
+
+    private void reloadRecipes() {
+        List<Recipe> latest = RecipeRepository.getInstance().getRecipes();
+        allRecipes.clear();
+        allRecipes.addAll(latest);
+        recipeSearchIndex.clear();
     }
 
     private void showComingSoon() {

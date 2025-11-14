@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
+import fpoly.ph62768.cooking.model.BaiChoDuyet;
 import fpoly.ph62768.cooking.model.Recipe;
 import fpoly.ph62768.cooking.model.RecipeCategory;
 import fpoly.ph62768.cooking.model.RecipeFeedback;
@@ -63,6 +64,56 @@ public class RecipeRepository {
             feedbackByRecipe.put(recipeId, list);
         }
         list.add(0, feedback);
+    }
+
+    public Recipe addUserRecipe(BaiChoDuyet pendingRecipe) {
+        if (pendingRecipe == null) {
+            return null;
+        }
+        Recipe existing = getRecipeById(pendingRecipe.getId());
+        if (existing != null) {
+            return existing;
+        }
+
+        double rating = Math.min(5f, Math.max(1f, pendingRecipe.getDiemDanhGia()));
+        List<RecipeStep> steps = buildStepsFromPending(pendingRecipe);
+        Recipe recipe = new Recipe(
+                pendingRecipe.getId(),
+                pendingRecipe.getTenMon(),
+                pendingRecipe.getThoiGianNau(),
+                rating,
+                RecipeCategory.ALL,
+                pendingRecipe.getAnhMon(),
+                pendingRecipe.getMoTa(),
+                steps
+        );
+        recipes.add(0, recipe);
+        feedbackByRecipe.putIfAbsent(recipe.getId(), new ArrayList<>());
+        return recipe;
+    }
+
+    private List<RecipeStep> buildStepsFromPending(BaiChoDuyet pendingRecipe) {
+        List<RecipeStep> steps = new ArrayList<>();
+        if (pendingRecipe == null) {
+            return steps;
+        }
+        String rawSteps = pendingRecipe.getCongThucChiTiet();
+        if (rawSteps != null) {
+            String[] parts = rawSteps.split("\\r?\\n|\\u2022|\\|");
+            int index = 1;
+            for (String part : parts) {
+                String trimmed = part == null ? "" : part.trim();
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                String title = String.format(Locale.getDefault(), "Bước %d", index++);
+                steps.add(new RecipeStep(title, trimmed, pendingRecipe.getAnhMon()));
+            }
+        }
+        if (steps.isEmpty()) {
+            steps.add(new RecipeStep("Bước 1", pendingRecipe.getCongThucChiTiet(), pendingRecipe.getAnhMon()));
+        }
+        return steps;
     }
 
     private void seedData() {

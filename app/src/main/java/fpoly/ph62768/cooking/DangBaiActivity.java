@@ -1,7 +1,9 @@
 package fpoly.ph62768.cooking;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Patterns;
 import android.widget.ImageButton;
 import android.widget.RatingBar;
 import android.widget.Toast;
@@ -46,6 +48,10 @@ public class DangBaiActivity extends AppCompatActivity {
         TextInputEditText nameInput = findViewById(R.id.dang_bai_ten_mon_input);
         TextInputEditText durationInput = findViewById(R.id.dang_bai_thoi_gian_input);
         TextInputEditText descriptionInput = findViewById(R.id.dang_bai_mo_ta_input);
+        TextInputLayout imageLayout = findViewById(R.id.dang_bai_anh_layout);
+        TextInputEditText imageInput = findViewById(R.id.dang_bai_anh_input);
+        TextInputLayout stepsLayout = findViewById(R.id.dang_bai_cong_thuc_layout);
+        TextInputEditText stepsInput = findViewById(R.id.dang_bai_cong_thuc_input);
         MaterialButton submitButton = findViewById(R.id.dang_bai_gui_button);
         RatingBar ratingBar = findViewById(R.id.dang_bai_danh_gia_ratingbar);
 
@@ -55,6 +61,8 @@ public class DangBaiActivity extends AppCompatActivity {
             String name = nameInput.getText() != null ? nameInput.getText().toString().trim() : "";
             String duration = durationInput.getText() != null ? durationInput.getText().toString().trim() : "";
             String description = descriptionInput.getText() != null ? descriptionInput.getText().toString().trim() : "";
+            String imageUrl = imageInput.getText() != null ? imageInput.getText().toString().trim() : "";
+            String steps = stepsInput.getText() != null ? stepsInput.getText().toString().trim() : "";
             float ratingValue = ratingBar.getRating();
 
             boolean hasError = false;
@@ -76,6 +84,18 @@ public class DangBaiActivity extends AppCompatActivity {
             } else {
                 descriptionLayout.setError(null);
             }
+            if (TextUtils.isEmpty(imageUrl) || !Patterns.WEB_URL.matcher(imageUrl).matches()) {
+                imageLayout.setError(getString(R.string.create_recipe_validate_image));
+                hasError = true;
+            } else {
+                imageLayout.setError(null);
+            }
+            if (TextUtils.isEmpty(steps)) {
+                stepsLayout.setError(getString(R.string.create_recipe_validate_steps));
+                hasError = true;
+            } else {
+                stepsLayout.setError(null);
+            }
             if (ratingValue <= 0f) {
                 Toast.makeText(this, R.string.create_recipe_validate_rating, Toast.LENGTH_SHORT).show();
                 hasError = true;
@@ -90,11 +110,18 @@ public class DangBaiActivity extends AppCompatActivity {
                     name,
                     duration,
                     description,
+                    imageUrl,
+                    steps,
                     System.currentTimeMillis(),
                     ratingValue,
                     BaiChoDuyet.TrangThai.PENDING
             );
             baiChoDuyetStore.themBaiChoDuyet(currentUserEmail, recipe);
+
+            Intent resultIntent = new Intent();
+            resultIntent.putExtra("extra_pending_recipe_name", name);
+            setResult(RESULT_OK, resultIntent);
+
             Toast.makeText(this, R.string.create_recipe_success, Toast.LENGTH_SHORT).show();
             finish();
         });
