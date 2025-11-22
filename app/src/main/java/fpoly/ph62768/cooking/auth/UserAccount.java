@@ -2,9 +2,12 @@ package fpoly.ph62768.cooking.auth;
 
 public class UserAccount {
 
+    // Properties
     private String name;
     private String password;
     private long createdAt;
+    // Constructors
+
 
     public UserAccount() {
     }
@@ -18,6 +21,7 @@ public class UserAccount {
         this.password = password;
         this.createdAt = createdAt;
     }
+    // Getters and setters
 
     public String getName() {
         return name;

@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 
 public class RecipeFeedback {
 
+
     private final String userName;
     private final float rating;
     private final String comment;
