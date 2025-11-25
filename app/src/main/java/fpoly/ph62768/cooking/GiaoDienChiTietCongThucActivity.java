@@ -124,6 +124,7 @@ public class GiaoDienChiTietCongThucActivity extends AppCompatActivity {
                 userRatingButton.setText(R.string.detail_user_rating_update);
             }
             userRatingButton.setOnClickListener(v -> {
+                //dfd
                 float selected = userRatingBar.getRating();
                 if (selected <= 0f) {
                     Toast.makeText(this, R.string.detail_user_rating_required, Toast.LENGTH_SHORT).show();
