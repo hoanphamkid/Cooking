@@ -12,8 +12,6 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-
 import fpoly.ph62768.cooking.RecipeCollectionActivity.CollectionType;
 import fpoly.ph62768.cooking.auth.UserAccount;
 import fpoly.ph62768.cooking.auth.UserAccountManager;
@@ -44,6 +42,8 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
                 currentUserName = name;
             }
         }
+
+        baiChoDuyetStore = new BaiChoDuyetStore(this);
 
         ImageButton backButton = findViewById(R.id.profile_back_button);
         backButton.setOnClickListener(v -> onBackPressed());
@@ -78,13 +78,7 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
             emailText.setText(currentUserEmail);
         }
 
-        baiChoDuyetStore = new BaiChoDuyetStore(this);
         setupRows(accountManager);
-
-        FloatingActionButton fab = findViewById(R.id.profile_fab);
-        fab.setOnClickListener(v ->
-                Toast.makeText(this, "Tính năng thêm công thức đang được phát triển", Toast.LENGTH_SHORT).show()
-        );
 
         LinearLayout tabHome = findViewById(R.id.profile_tab_home);
         LinearLayout tabHot = findViewById(R.id.profile_tab_hot);
@@ -111,7 +105,8 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
 
         tabHot.setOnClickListener(v -> {
             selectBottomTab(ProfileTab.HOT);
-            Toast.makeText(this, "Tính năng đang phát triển", Toast.LENGTH_SHORT).show();
+            Intent hotIntent = new Intent(this, HotRecipesActivity.class);
+            startActivity(hotIntent);
         });
 
         tabRandom.setOnClickListener(v -> {

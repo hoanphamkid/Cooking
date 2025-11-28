@@ -562,17 +562,5 @@
         </LinearLayout>
     </LinearLayout>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/profile_fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="24dp"
-        android:layout_marginBottom="96dp"
-        android:contentDescription="@string/home_add_recipe"
-        app:backgroundTint="#FF7A33"
-        app:srcCompat="@drawable/ic_nav_add"
-        app:tint="@android:color/white" />
-
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

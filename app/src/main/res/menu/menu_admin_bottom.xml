@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_users"
+        android:icon="@drawable/ic_profile_history"
+        android:title="@string/admin_tab_users" />
+    <item
+        android:id="@+id/action_recipes"
+        android:icon="@drawable/ic_nav_add"
+        android:title="@string/admin_tab_recipes" />
+    <item
+        android:id="@+id/action_review"
+        android:icon="@drawable/ic_profile_pending"
+        android:title="@string/admin_tab_review" />
+    <item
+        android:id="@+id/action_stats"
+        android:icon="@drawable/ic_nav_fire"
+        android:title="@string/admin_tab_stats" />
+    <item
+        android:id="@+id/action_logout"
+        android:icon="@drawable/ic_profile_logout"
+        android:title="@string/admin_tab_logout" />
+</menu>
+

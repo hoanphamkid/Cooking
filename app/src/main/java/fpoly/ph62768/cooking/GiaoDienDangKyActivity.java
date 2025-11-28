@@ -14,7 +14,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
-import fpoly.ph62768.cooking.auth.UserAccountManager;
+import fpoly.ph62768.cooking.data.remote.AuthRepository;
+import fpoly.ph62768.cooking.data.remote.dto.AuthResponse;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class GiaoDienDangKyActivity extends AppCompatActivity {
 
@@ -39,6 +43,8 @@ public class GiaoDienDangKyActivity extends AppCompatActivity {
         }
         loginLink.setText(spannable);
         loginLink.setOnClickListener(v -> finish());
+
+        AuthRepository authRepository = new AuthRepository();
 
         registerButton.setOnClickListener(v -> {
             String name = nameInput.getText() != null ? nameInput.getText().toString().trim() : "";
@@ -71,16 +77,50 @@ public class GiaoDienDangKyActivity extends AppCompatActivity {
                 return;
             }
 
-            UserAccountManager accountManager = new UserAccountManager(this);
-            if (accountManager.getAccount(email) != null) {
-                emailInput.setError(getString(R.string.error_email_exists));
-                Toast.makeText(this, R.string.register_email_exists_message, Toast.LENGTH_SHORT).show();
-                return;
-            }
-            accountManager.saveAccount(name, email, password);
-            Toast.makeText(this, getString(R.string.register_success_message, email), Toast.LENGTH_SHORT).show();
-            finish();
+            setLoading(registerButton, true);
+            authRepository.register(name, email, password).enqueue(new Callback<AuthResponse>() {
+                @Override
+                public void onResponse(Call<AuthResponse> call, Response<AuthResponse> response) {
+                    setLoading(registerButton, false);
+                    if (response.isSuccessful()) {
+                        Toast.makeText(GiaoDienDangKyActivity.this,
+                                getString(R.string.register_success_message, email),
+                                Toast.LENGTH_SHORT).show();
+                        finish();
+                    } else {
+                        showError(response, getString(R.string.register_email_exists_message));
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<AuthResponse> call, Throwable t) {
+                    setLoading(registerButton, false);
+                    Toast.makeText(GiaoDienDangKyActivity.this, t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
         });
+    }
+
+    private void setLoading(MaterialButton button, boolean loading) {
+        button.setEnabled(!loading);
+        button.setText(loading ? getString(R.string.loading) : getString(R.string.register_button_text));
+    }
+
+    private void showError(Response<?> response, String fallback) {
+        String message = fallback;
+        if (response != null && response.errorBody() != null) {
+            try {
+                String raw = response.errorBody().string();
+                if (!TextUtils.isEmpty(raw)) {
+                    message = raw;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        if (TextUtils.isEmpty(message)) {
+            message = getString(R.string.error_email_exists);
+        }
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 }
 

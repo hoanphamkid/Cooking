@@ -12,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.google.android.material.button.MaterialButton;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -46,7 +47,7 @@ public class BaiChoDuyetAdapter extends RecyclerView.Adapter<BaiChoDuyetAdapter.
     private final SimpleDateFormat dinhDangNgay = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy", Locale.getDefault());
 
     private Listener listener;
-    private boolean hienThiHanhDong = false;
+    private boolean cheDoQuanTri = false;
 
     public void capNhatDanhSach(List<Item> items) {
         danhSach.clear();
@@ -58,10 +59,11 @@ public class BaiChoDuyetAdapter extends RecyclerView.Adapter<BaiChoDuyetAdapter.
 
     public void setListener(Listener listener) {
         this.listener = listener;
+        notifyDataSetChanged();
     }
 
-    public void setHienThiHanhDong(boolean hienThiHanhDong) {
-        this.hienThiHanhDong = hienThiHanhDong;
+    public void setHienThiHanhDong(boolean cheDoQuanTri) {
+        this.cheDoQuanTri = cheDoQuanTri;
         notifyDataSetChanged();
     }
 
@@ -75,7 +77,7 @@ public class BaiChoDuyetAdapter extends RecyclerView.Adapter<BaiChoDuyetAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull BaiChoViewHolder holder, int position) {
-        holder.bind(danhSach.get(position), dinhDangNgay, hienThiHanhDong, listener);
+        holder.bind(danhSach.get(position), dinhDangNgay, cheDoQuanTri, listener);
     }
 
     @Override
@@ -85,31 +87,25 @@ public class BaiChoDuyetAdapter extends RecyclerView.Adapter<BaiChoDuyetAdapter.
 
     static class BaiChoViewHolder extends RecyclerView.ViewHolder {
 
+        private final ImageView hinhAnhView;
         private final TextView tenMonView;
-        private final TextView thoiGianNauView;
         private final TextView moTaView;
-        private final TextView congThucView;
+        private final TextView emailView;
         private final TextView trangThaiView;
         private final TextView thoiGianTaoView;
-        private final TextView emailView;
-        private final TextView danhGiaView;
-        private final ImageView hinhAnhView;
         private final LinearLayout hanhDongContainer;
-        private final View duyetButton;
-        private final View tuChoiButton;
-        private final View xoaButton;
+        private final MaterialButton duyetButton;
+        private final MaterialButton tuChoiButton;
+        private final MaterialButton xoaButton;
 
         BaiChoViewHolder(@NonNull View itemView) {
             super(itemView);
+            hinhAnhView = itemView.findViewById(R.id.bai_cho_hinh_anh);
             tenMonView = itemView.findViewById(R.id.bai_cho_ten_mon);
-            thoiGianNauView = itemView.findViewById(R.id.bai_cho_thoi_gian);
             moTaView = itemView.findViewById(R.id.bai_cho_mo_ta);
-            congThucView = itemView.findViewById(R.id.bai_cho_cong_thuc);
+            emailView = itemView.findViewById(R.id.bai_cho_email);
             trangThaiView = itemView.findViewById(R.id.bai_cho_trang_thai);
             thoiGianTaoView = itemView.findViewById(R.id.bai_cho_thoi_gian_tao);
-            emailView = itemView.findViewById(R.id.bai_cho_email);
-            danhGiaView = itemView.findViewById(R.id.bai_cho_gia_tri_danh_gia);
-            hinhAnhView = itemView.findViewById(R.id.bai_cho_hinh_anh);
             hanhDongContainer = itemView.findViewById(R.id.bai_cho_actions);
             duyetButton = itemView.findViewById(R.id.bai_cho_duyet_button);
             tuChoiButton = itemView.findViewById(R.id.bai_cho_tu_choi_button);
@@ -118,15 +114,16 @@ public class BaiChoDuyetAdapter extends RecyclerView.Adapter<BaiChoDuyetAdapter.
 
         void bind(Item item,
                   SimpleDateFormat dinhDangNgay,
-                  boolean hienThiHanhDong,
+                  boolean cheDoQuanTri,
                   Listener listener) {
             BaiChoDuyet recipe = item.recipe;
             tenMonView.setText(recipe.getTenMon());
-            thoiGianNauView.setText(thoiGianNauView.getContext().getString(R.string.pending_item_duration, recipe.getThoiGianNau()));
-            moTaView.setText(moTaView.getContext().getString(R.string.pending_item_ingredients, recipe.getMoTa()));
-            congThucView.setText(congThucView.getContext().getString(R.string.pending_item_steps, recipe.getCongThucChiTiet()));
-            thoiGianTaoView.setText(dinhDangNgay.format(new Date(recipe.getThoiGianTao())));
-            danhGiaView.setText(danhGiaView.getContext().getString(R.string.pending_item_rating, recipe.getDiemDanhGia()));
+            if (!TextUtils.isEmpty(recipe.getMoTa())) {
+                moTaView.setText(recipe.getMoTa());
+                moTaView.setVisibility(View.VISIBLE);
+            } else {
+                moTaView.setVisibility(View.GONE);
+            }
 
             if (!TextUtils.isEmpty(item.email)) {
                 emailView.setVisibility(View.VISIBLE);
@@ -164,17 +161,38 @@ public class BaiChoDuyetAdapter extends RecyclerView.Adapter<BaiChoDuyetAdapter.
             trangThaiView.setText(textId);
             trangThaiView.setBackgroundResource(backgroundRes);
 
-            boolean coTheThaoTac = hienThiHanhDong && recipe.getTrangThai() == BaiChoDuyet.TrangThai.PENDING;
-            hanhDongContainer.setVisibility(coTheThaoTac ? View.VISIBLE : View.GONE);
-            if (coTheThaoTac && listener != null) {
-                duyetButton.setOnClickListener(v -> listener.onApprove(item));
-                tuChoiButton.setOnClickListener(v -> listener.onReject(item));
-                xoaButton.setOnClickListener(v -> listener.onDelete(item));
+            String thoiGian = dinhDangNgay.format(new Date(recipe.getThoiGianTao()));
+            thoiGianTaoView.setText(thoiGianTaoView.getContext().getString(R.string.pending_item_sent_at, thoiGian));
+
+            if (listener == null) {
+                hanhDongContainer.setVisibility(View.GONE);
+                return;
+            }
+
+            hanhDongContainer.setVisibility(View.VISIBLE);
+            xoaButton.setVisibility(View.VISIBLE);
+            xoaButton.setOnClickListener(v -> listener.onDelete(item));
+
+            if (cheDoQuanTri) {
+                boolean isPending = recipe.getTrangThai() == BaiChoDuyet.TrangThai.PENDING;
+                if (isPending) {
+                    duyetButton.setVisibility(View.VISIBLE);
+                    tuChoiButton.setVisibility(View.VISIBLE);
+                    duyetButton.setOnClickListener(v -> listener.onApprove(item));
+                    tuChoiButton.setOnClickListener(v -> listener.onReject(item));
+                } else {
+                    duyetButton.setVisibility(View.GONE);
+                    tuChoiButton.setVisibility(View.GONE);
+                    duyetButton.setOnClickListener(null);
+                    tuChoiButton.setOnClickListener(null);
+                }
             } else {
+                duyetButton.setVisibility(View.GONE);
+                tuChoiButton.setVisibility(View.GONE);
                 duyetButton.setOnClickListener(null);
                 tuChoiButton.setOnClickListener(null);
-                xoaButton.setOnClickListener(null);
             }
         }
     }
+
 }

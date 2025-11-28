@@ -1,11 +1,13 @@
 package fpoly.ph62768.cooking;
 
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.RatingBar;
@@ -29,9 +31,11 @@ import java.util.Locale;
 
 import fpoly.ph62768.cooking.auth.UserAccount;
 import fpoly.ph62768.cooking.auth.UserAccountManager;
+import fpoly.ph62768.cooking.data.RecipeMetricHelper;
 import fpoly.ph62768.cooking.data.RecipePreferenceStore;
 import fpoly.ph62768.cooking.data.RecipeRepository;
 import fpoly.ph62768.cooking.data.RecipeRatingStore;
+import fpoly.ph62768.cooking.data.RecipeStatsStore;
 import fpoly.ph62768.cooking.model.Recipe;
 import fpoly.ph62768.cooking.model.RecipeFeedback;
 import fpoly.ph62768.cooking.ui.RecipeFeedbackAdapter;
@@ -63,6 +67,7 @@ public class GiaoDienChiTietCongThucActivity extends AppCompatActivity {
 
         RecipePreferenceStore preferenceStore = new RecipePreferenceStore(this);
         RecipeRatingStore ratingStore = new RecipeRatingStore(this);
+        RecipeStatsStore statsStore = new RecipeStatsStore(this);
         UserAccountManager accountManager = new UserAccountManager(this);
         String currentUserEmail = accountManager.getCurrentUserEmail(this);
 
@@ -74,6 +79,7 @@ public class GiaoDienChiTietCongThucActivity extends AppCompatActivity {
         TextView descriptionText = findViewById(R.id.detail_description);
         TextView durationText = findViewById(R.id.detail_duration);
         TextView ratingValueText = findViewById(R.id.detail_rating_text);
+        TextView viewCountText = findViewById(R.id.detail_view_count);
         RatingBar ratingBar = findViewById(R.id.detail_rating_bar);
         RecyclerView stepRecyclerView = findViewById(R.id.detail_steps_recycler);
         MaterialButton saveButton = findViewById(R.id.detail_save_button);
@@ -85,6 +91,13 @@ public class GiaoDienChiTietCongThucActivity extends AppCompatActivity {
         TextInputLayout feedbackInputLayout = findViewById(R.id.detail_feedback_input_layout);
         TextInputEditText feedbackInput = findViewById(R.id.detail_feedback_input);
         MaterialButton feedbackSubmit = findViewById(R.id.detail_feedback_submit);
+        TextView authorLabel = findViewById(R.id.detail_author_label);
+        View authorCard = findViewById(R.id.detail_author_card);
+        ImageView authorAvatar = findViewById(R.id.detail_author_avatar);
+        TextView authorNameView = findViewById(R.id.detail_author_name);
+        TextView authorEmailView = findViewById(R.id.detail_author_email);
+        MaterialButton authorProfileButton = findViewById(R.id.detail_author_profile_button);
+        MaterialButton authorMessageButton = findViewById(R.id.detail_author_message_button);
 
         backButton.setOnClickListener(v -> onBackPressed());
         menuButton.setOnClickListener(v ->
@@ -105,12 +118,73 @@ public class GiaoDienChiTietCongThucActivity extends AppCompatActivity {
         ratingBar.setRating(averageRating);
         ratingValueText.setText(String.format(Locale.getDefault(), "%.1f", averageRating));
 
+        String authorEmail = recipe.getAuthorEmail();
+        if (!TextUtils.isEmpty(authorEmail)) {
+            String authorDisplayName = !TextUtils.isEmpty(recipe.getAuthorName())
+                    ? recipe.getAuthorName()
+                    : resolveDisplayNameForEmail(accountManager, authorEmail);
+            if (authorLabel != null) {
+                authorLabel.setVisibility(View.VISIBLE);
+            }
+            if (authorCard != null) {
+                authorCard.setVisibility(View.VISIBLE);
+            }
+            if (authorNameView != null) {
+                authorNameView.setText(authorDisplayName);
+            }
+            if (authorEmailView != null) {
+                authorEmailView.setText(authorEmail);
+            }
+            if (authorAvatar != null) {
+                Glide.with(this)
+                        .load(R.drawable.ic_profile_placeholder)
+                        .circleCrop()
+                        .into(authorAvatar);
+            }
+            if (authorProfileButton != null) {
+                authorProfileButton.setOnClickListener(v -> {
+                    Intent profileIntent = new Intent(this, HoSoNguoiDungCongKhaiActivity.class);
+                    profileIntent.putExtra(HoSoNguoiDungCongKhaiActivity.EXTRA_TARGET_EMAIL, authorEmail);
+                    profileIntent.putExtra(HoSoNguoiDungCongKhaiActivity.EXTRA_TARGET_NAME, authorDisplayName);
+                    startActivity(profileIntent);
+                });
+            }
+            boolean isSelf = !TextUtils.isEmpty(currentUserEmail)
+                    && currentUserEmail.equalsIgnoreCase(authorEmail);
+            if (authorMessageButton != null) {
+                if (isSelf) {
+                    authorMessageButton.setVisibility(View.GONE);
+                } else {
+                    authorMessageButton.setVisibility(View.VISIBLE);
+                    authorMessageButton.setOnClickListener(v -> {
+                        Intent chatIntent = new Intent(this, TinNhanActivity.class);
+                        chatIntent.putExtra(TinNhanActivity.EXTRA_TARGET_EMAIL, authorEmail);
+                        chatIntent.putExtra(TinNhanActivity.EXTRA_TARGET_NAME, authorDisplayName);
+                        startActivity(chatIntent);
+                    });
+                }
+            }
+        } else {
+            if (authorLabel != null) {
+                authorLabel.setVisibility(View.GONE);
+            }
+            if (authorCard != null) {
+                authorCard.setVisibility(View.GONE);
+            }
+        }
+
         RecipeStepAdapter stepAdapter = new RecipeStepAdapter();
         stepAdapter.submitList(recipe.getSteps());
         stepRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         stepRecyclerView.setAdapter(stepAdapter);
 
         preferenceStore.addToHistory(recipe.getId());
+        int viewBase = RecipeMetricHelper.calculateBaseMetric(recipe, RecipeMetricHelper.Metric.VIEWS);
+        statsStore.incrementView(recipe.getId(), viewBase);
+        if (viewCountText != null) {
+            int totalViews = RecipeMetricHelper.calculateTotalViews(recipe, statsStore);
+            viewCountText.setText(getString(R.string.detail_views_label, totalViews));
+        }
 
         if (TextUtils.isEmpty(currentUserEmail)) {
             userRatingBar.setIsIndicator(true);
@@ -155,6 +229,7 @@ public class GiaoDienChiTietCongThucActivity extends AppCompatActivity {
 
         favoriteButton.setOnClickListener(v -> {
             boolean nowFavorite = preferenceStore.toggleFavorite(recipe.getId());
+            statsStore.setFavoriteState(recipe.getId(), nowFavorite);
             updateToggleButton(favoriteButton, nowFavorite, R.string.detail_favorited, R.string.detail_favorite);
             Toast.makeText(this,
                     getString(nowFavorite ? R.string.detail_favorite_added : R.string.detail_favorite_removed),
@@ -201,6 +276,7 @@ public class GiaoDienChiTietCongThucActivity extends AppCompatActivity {
 
             RecipeFeedback newFeedback = new RecipeFeedback(displayName, ratingValue, comment, createdAt);
             repository.addFeedbackForRecipe(recipe.getId(), newFeedback);
+            statsStore.incrementFeedback(recipe.getId());
             feedbackAdapter.submitList(repository.getFeedbackForRecipe(recipe.getId()));
             feedbackRecycler.smoothScrollToPosition(0);
 
@@ -238,5 +314,19 @@ public class GiaoDienChiTietCongThucActivity extends AppCompatActivity {
             return email;
         }
         return getString(R.string.detail_feedback_anonymous);
+    }
+
+    private String resolveDisplayNameForEmail(UserAccountManager accountManager, String email) {
+        if (TextUtils.isEmpty(email)) {
+            return "";
+        }
+        if (accountManager == null) {
+            return email;
+        }
+        UserAccount account = accountManager.getAccount(email);
+        if (account != null && !TextUtils.isEmpty(account.getName())) {
+            return account.getName();
+        }
+        return email;
     }
 }

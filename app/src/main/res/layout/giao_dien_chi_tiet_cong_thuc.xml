@@ -104,6 +104,103 @@
                     android:textSize="15sp"
                     tools:text="Hướng dẫn chi tiết giúp bạn chuẩn bị món khoai tây chiên lắc phô mai thơm ngon tại nhà." />
 
+                <TextView
+                    android:id="@+id/detail_author_label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:text="@string/detail_author_title"
+                    android:textColor="@android:color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/detail_author_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@android:color/white"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="2dp"
+                    tools:visibility="visible">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="16dp">
+
+                        <ImageView
+                            android:id="@+id/detail_author_avatar"
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:background="@drawable/bg_circle_avatar"
+                            android:contentDescription="@string/detail_author_title"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/ic_profile_placeholder" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/detail_author_name"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:textColor="@android:color/black"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                tools:text="Nguyễn Minh Anh" />
+
+                            <TextView
+                                android:id="@+id/detail_author_email"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:textColor="#8D8D8D"
+                                android:textSize="13sp"
+                                tools:text="minhanh@gmail.com" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/detail_author_profile_button"
+                                style="@style/Widget.MaterialComponents.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/detail_author_view_profile"
+                                android:textAllCaps="false"
+                                android:textColor="#FF7A33"
+                                app:icon="@drawable/ic_profile_history"
+                                app:iconPadding="8dp"
+                                app:iconTint="#FF7A33" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/detail_author_message_button"
+                                style="@style/Widget.MaterialComponents.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/detail_author_message"
+                                android:textAllCaps="false"
+                                android:textColor="#FF7A33"
+                                app:icon="@drawable/ic_chat"
+                                app:iconPadding="8dp"
+                                app:iconTint="#FF7A33" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -154,6 +251,30 @@
                             android:textSize="14sp"
                             tools:text="4.5" />
                     </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/detail_views_container"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/ic_view"
+                        android:tint="#FF7A33" />
+
+                    <TextView
+                        android:id="@+id/detail_view_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:textColor="#8D8D8D"
+                        android:textSize="14sp"
+                        tools:text="120 lượt xem" />
+                </LinearLayout>
 
                 </LinearLayout>
 

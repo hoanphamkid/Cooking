@@ -34,12 +34,35 @@ public class RecipeRepository {
         return Collections.unmodifiableList(recipes);
     }
 
+    public synchronized void replaceAll(List<Recipe> newRecipes) {
+        recipes.clear();
+        if (newRecipes != null && !newRecipes.isEmpty()) {
+            recipes.addAll(newRecipes);
+        }
+        feedbackByRecipe.clear();
+        counter = recipes.size();
+    }
+
     public Recipe getRecipeById(String id) {
         if (id == null) return null;
         for (Recipe r : recipes) {
             if (id.equals(r.getId())) return r;
         }
         return null;
+    }
+
+    public List<Recipe> getRecipesByAuthor(String authorEmail) {
+        if (authorEmail == null || authorEmail.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        String normalized = authorEmail.trim().toLowerCase(Locale.getDefault());
+        List<Recipe> results = new ArrayList<>();
+        for (Recipe recipe : recipes) {
+            if (normalized.equals(recipe.getAuthorEmail())) {
+                results.add(recipe);
+            }
+        }
+        return results;
     }
 
     public List<RecipeFeedback> getFeedbackForRecipe(String recipeId) {
@@ -66,7 +89,7 @@ public class RecipeRepository {
         list.add(0, feedback);
     }
 
-    public Recipe addUserRecipe(BaiChoDuyet pendingRecipe) {
+    public Recipe addUserRecipe(String authorEmail, String authorName, BaiChoDuyet pendingRecipe) {
         if (pendingRecipe == null) {
             return null;
         }
@@ -85,7 +108,9 @@ public class RecipeRepository {
                 RecipeCategory.ALL,
                 pendingRecipe.getAnhMon(),
                 pendingRecipe.getMoTa(),
-                steps
+                steps,
+                authorEmail,
+                authorName
         );
         recipes.add(0, recipe);
         feedbackByRecipe.putIfAbsent(recipe.getId(), new ArrayList<>());
@@ -99,15 +124,31 @@ public class RecipeRepository {
         }
         String rawSteps = pendingRecipe.getCongThucChiTiet();
         if (rawSteps != null) {
-            String[] parts = rawSteps.split("\\r?\\n|\\u2022|\\|");
+            String[] parts = rawSteps.split("\\r?\\n");
+            if (parts.length == 1) {
+                parts = rawSteps.split("\\u2022|\\|");
+            }
             int index = 1;
             for (String part : parts) {
                 String trimmed = part == null ? "" : part.trim();
                 if (trimmed.isEmpty()) {
                     continue;
                 }
+                String description = trimmed;
+                String imageUrl = pendingRecipe.getAnhMon();
+                int marker = trimmed.indexOf("<<<");
+                if (marker >= 0) {
+                    description = trimmed.substring(0, marker).trim();
+                    String customImage = trimmed.substring(marker + 3).trim();
+                    if (!customImage.isEmpty()) {
+                        imageUrl = customImage;
+                    }
+                }
+                if (description.isEmpty()) {
+                    continue;
+                }
                 String title = String.format(Locale.getDefault(), "Bước %d", index++);
-                steps.add(new RecipeStep(title, trimmed, pendingRecipe.getAnhMon()));
+                steps.add(new RecipeStep(title, description, imageUrl));
             }
         }
         if (steps.isEmpty()) {

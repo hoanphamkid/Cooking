@@ -13,6 +13,9 @@ public class Recipe {
     private final String imageUrl;
     private final String description;
     private final List<RecipeStep> steps;
+    private final String authorEmail;
+    private final String authorName;
+    private final String backendCategoryName;
 
     public Recipe(String id,
                   String name,
@@ -22,6 +25,34 @@ public class Recipe {
                   String imageUrl,
                   String description,
                   List<RecipeStep> steps) {
+        this(id, name, duration, rating, category, imageUrl, description, steps, null, null);
+    }
+
+    public Recipe(String id,
+                  String name,
+                  String duration,
+                  double rating,
+                  RecipeCategory category,
+                  String imageUrl,
+                  String description,
+                  List<RecipeStep> steps,
+                  String authorEmail,
+                  String authorName) {
+        this(id, name, duration, rating, category, imageUrl, description, steps, authorEmail, authorName,
+                category != null ? category.getDisplayName() : "");
+    }
+
+    public Recipe(String id,
+                  String name,
+                  String duration,
+                  double rating,
+                  RecipeCategory category,
+                  String imageUrl,
+                  String description,
+                  List<RecipeStep> steps,
+                  String authorEmail,
+                  String authorName,
+                  String backendCategoryName) {
         this.id = id;
         this.name = name;
         this.duration = duration;
@@ -30,6 +61,9 @@ public class Recipe {
         this.imageUrl = imageUrl;
         this.description = description;
         this.steps = steps == null ? new ArrayList<>() : new ArrayList<>(steps);
+        this.authorEmail = authorEmail == null ? "" : authorEmail.trim().toLowerCase();
+        this.authorName = authorName == null ? "" : authorName.trim();
+        this.backendCategoryName = backendCategoryName == null ? "" : backendCategoryName.trim();
     }
 
     public String getId() {
@@ -62,5 +96,20 @@ public class Recipe {
 
     public List<RecipeStep> getSteps() {
         return Collections.unmodifiableList(steps);
+    }
+
+    public String getAuthorEmail() {
+        return authorEmail;
+    }
+
+    public String getAuthorName() {
+        return authorName;
+    }
+
+    public String getBackendCategoryName() {
+        if (!backendCategoryName.isEmpty()) {
+            return backendCategoryName;
+        }
+        return category != null ? category.getDisplayName() : "";
     }
 }

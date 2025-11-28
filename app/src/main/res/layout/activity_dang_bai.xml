@@ -110,45 +110,35 @@
                 android:inputType="textUri" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/dang_bai_cong_thuc_layout"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:hint="@string/create_recipe_steps_hint"
-            app:boxStrokeColor="#FF7A33"
-            app:hintTextColor="#FF7A33">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/dang_bai_cong_thuc_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:minLines="4"
-                android:maxLines="8" />
-        </com.google.android.material.textfield.TextInputLayout>
-
         <TextView
-            android:id="@+id/dang_bai_danh_gia_label"
+            android:id="@+id/dang_bai_buoc_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="@string/create_recipe_rating_label"
+            android:text="@string/create_recipe_steps_label"
             android:textColor="#4A4A4A"
             android:textSize="15sp"
             android:textStyle="bold" />
 
-        <RatingBar
-            android:id="@+id/dang_bai_danh_gia_ratingbar"
+        <LinearLayout
+            android:id="@+id/dang_bai_step_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dang_bai_them_buoc_button"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:numStars="5"
-            android:stepSize="1.0"
-            android:layout_marginTop="4dp"
-            android:progressTint="#FFB74D"
-            android:secondaryProgressTint="#FFB74D"
-            android:progressBackgroundTint="#FFE8D9" />
+            android:layout_marginTop="12dp"
+            android:text="@string/create_recipe_add_step"
+            app:strokeColor="#FF7A33"
+            app:strokeWidth="1dp"
+            app:icon="@drawable/ic_nav_add"
+            app:iconPadding="8dp"
+            app:iconTint="#FF7A33"
+            android:textColor="#FF7A33" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/dang_bai_gui_button"

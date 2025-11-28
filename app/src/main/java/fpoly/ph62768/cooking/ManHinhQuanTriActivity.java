@@ -9,8 +9,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,15 +28,22 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import fpoly.ph62768.cooking.auth.SessionManager;
 import fpoly.ph62768.cooking.auth.UserAccount;
 import fpoly.ph62768.cooking.auth.UserAccountManager;
 import fpoly.ph62768.cooking.data.BaiChoDuyetStore;
 import fpoly.ph62768.cooking.data.BaiChoDuyetStore.BanGhi;
 import fpoly.ph62768.cooking.data.RecipeRepository;
+import fpoly.ph62768.cooking.data.remote.UserApiService;
+import fpoly.ph62768.cooking.data.remote.dto.UserResponse;
 import fpoly.ph62768.cooking.model.BaiChoDuyet;
 import fpoly.ph62768.cooking.model.Recipe;
+import fpoly.ph62768.cooking.network.ApiClient;
 import fpoly.ph62768.cooking.ui.AdminUserAdapter;
 import fpoly.ph62768.cooking.ui.RecipeAdapter;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class ManHinhQuanTriActivity extends AppCompatActivity {
 
@@ -51,17 +59,41 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
     private TextView pendingAlertView;
     private TextView recipeSummaryView;
     private TextView recipeEmptyView;
+    private TextView overviewUsersValue;
+    private TextView overviewUsersSub;
+    private TextView overviewContentValue;
+    private TextView overviewContentSub;
+    private TextView overviewApprovedValue;
+    private TextView overviewApprovedSub;
+    private TextView overviewPendingValue;
+    private TextView overviewPendingSub;
+    private TextView detailUsersTotalValue;
+    private TextView detailUsersActiveValue;
+    private TextView detailUsersLockedValue;
+    private TextView detailRecipesTotalValue;
+    private TextView detailRecipesApprovedValue;
+    private TextView detailRecipesPendingValue;
+    private TextView detailRecipesLikesValue;
+    private TextView detailPostsTotalValue;
+    private TextView detailPostsApprovedValue;
+    private TextView detailPostsPendingValue;
+    private View topUserCard;
+    private TextView topUserRankView;
+    private TextView topUserNameView;
+    private TextView topUserEmailView;
+    private TextView topUserTotalView;
+    private TextView topUserStatsView;
 
-    private View statUsersView;
-    private View statRecipesView;
-    private View statLikesView;
     private View userListAnchor;
     private View recipeListAnchor;
     private View userSectionView;
     private View recipeSectionView;
+    private View statsSectionView;
 
     private UserAccountManager accountManager;
     private BaiChoDuyetStore baiChoDuyetStore;
+    private UserApiService userApiService;
+    private SessionManager sessionManager;
     private AdminUserAdapter userAdapter;
     private RecipeAdapter recipeAdapter;
     private NestedScrollView scrollView;
@@ -71,6 +103,11 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
     private int totalUsers = 0;
     private int totalRecipes = 0;
     private int totalPending = 0;
+    private Map<String, UserPostStats> currentPostStats = new HashMap<>();
+    private Map<String, UserAccount> currentUserAccounts = new HashMap<>();
+    private int totalUserPosts = 0;
+    private int totalApprovedPosts = 0;
+    private int totalPendingPosts = 0;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -79,6 +116,8 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
 
         accountManager = new UserAccountManager(this);
         baiChoDuyetStore = new BaiChoDuyetStore(this);
+        userApiService = ApiClient.getInstance().create(UserApiService.class);
+        sessionManager = new SessionManager(this);
 
         adminNameView = findViewById(R.id.admin_name);
         adminEmailView = findViewById(R.id.admin_email);
@@ -87,14 +126,35 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
         scrollView = findViewById(R.id.admin_scroll);
         bottomNavigationView = findViewById(R.id.admin_bottom_nav);
 
-        statUsersView = findViewById(R.id.admin_stat_users);
-        statRecipesView = findViewById(R.id.admin_stat_recipes);
-        statLikesView = findViewById(R.id.admin_stat_likes);
-
         userSectionView = findViewById(R.id.admin_user_section);
         recipeSectionView = findViewById(R.id.admin_recipe_section);
+        statsSectionView = findViewById(R.id.admin_stats_section);
         recipeSummaryView = findViewById(R.id.admin_recipe_summary);
         recipeEmptyView = findViewById(R.id.admin_recipe_empty);
+        overviewUsersValue = findViewById(R.id.overview_users_value);
+        overviewUsersSub = findViewById(R.id.overview_users_sub);
+        overviewContentValue = findViewById(R.id.overview_content_value);
+        overviewContentSub = findViewById(R.id.overview_content_sub);
+        overviewApprovedValue = findViewById(R.id.overview_approved_value);
+        overviewApprovedSub = findViewById(R.id.overview_approved_sub);
+        overviewPendingValue = findViewById(R.id.overview_pending_value);
+        overviewPendingSub = findViewById(R.id.overview_pending_sub);
+        detailUsersTotalValue = findViewById(R.id.detail_users_total_value);
+        detailUsersActiveValue = findViewById(R.id.detail_users_active_value);
+        detailUsersLockedValue = findViewById(R.id.detail_users_locked_value);
+        detailRecipesTotalValue = findViewById(R.id.detail_recipes_total_value);
+        detailRecipesApprovedValue = findViewById(R.id.detail_recipes_approved_value);
+        detailRecipesPendingValue = findViewById(R.id.detail_recipes_pending_value);
+        detailRecipesLikesValue = findViewById(R.id.detail_recipes_likes_value);
+        detailPostsTotalValue = findViewById(R.id.detail_posts_total_value);
+        detailPostsApprovedValue = findViewById(R.id.detail_posts_approved_value);
+        detailPostsPendingValue = findViewById(R.id.detail_posts_pending_value);
+        topUserCard = findViewById(R.id.admin_top_user_card);
+        topUserRankView = findViewById(R.id.admin_top_user_rank);
+        topUserNameView = findViewById(R.id.admin_top_user_name);
+        topUserEmailView = findViewById(R.id.admin_top_user_email);
+        topUserTotalView = findViewById(R.id.admin_top_user_total);
+        topUserStatsView = findViewById(R.id.admin_top_user_stats);
 
         userListAnchor = userSectionView != null
                 ? userSectionView
@@ -102,10 +162,6 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
         recipeListAnchor = recipeSectionView != null
                 ? recipeSectionView
                 : findViewById(R.id.admin_recipe_recycler);
-
-        setupStatCard(statUsersView, getString(R.string.admin_stat_users_label));
-        setupStatCard(statRecipesView, getString(R.string.admin_stat_recipes_label));
-        setupStatCard(statLikesView, getString(R.string.admin_stat_likes_label));
 
         reviewSubtitleView = setupActionCard(
                 findViewById(R.id.admin_action_review),
@@ -118,6 +174,12 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
                 R.drawable.ic_nav_fire,
                 R.string.admin_action_stats_title,
                 R.string.admin_action_stats_sub
+        );
+        setupActionCard(
+                findViewById(R.id.admin_action_manage_distributors),
+                R.drawable.ic_storefront,
+                R.string.admin_action_manage_distributors_title,
+                R.string.admin_action_manage_distributors_sub
         );
         pendingAlertView = findViewById(R.id.admin_pending_alert);
         setupActionCard(
@@ -168,8 +230,8 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onDeleteClick(@NonNull String email) {
-                showDeleteConfirmation(email);
+            public void onDeleteClick(@Nullable String userId, @NonNull String email) {
+                showDeleteConfirmation(userId, email);
             }
         });
         recyclerView.setAdapter(userAdapter);
@@ -208,6 +270,7 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
     private void setupActionHandlers() {
         View userSectionCard = findViewById(R.id.admin_action_manage_users);
         View manageRecipesCard = findViewById(R.id.admin_action_manage_recipes);
+        View manageDistributorsCard = findViewById(R.id.admin_action_manage_distributors);
         View reviewCard = findViewById(R.id.admin_action_review);
         View alertView = pendingAlertView;
         View statsCard = findViewById(R.id.admin_action_stats);
@@ -232,29 +295,44 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
         if (manageRecipesCard != null) {
             manageRecipesCard.setOnClickListener(openRecipesSection);
         }
+        if (manageDistributorsCard != null) {
+            manageDistributorsCard.setOnClickListener(v -> {
+                Intent intent = new Intent(this, DistributorCrudActivity.class);
+                startActivity(intent);
+            });
+        }
 
         View.OnClickListener openReview = v -> {
             Intent intent = new Intent(this, DanhSachChoDuyetActivity.class);
             startActivity(intent);
         };
         View.OnClickListener reviewClick = v -> {
-            openReview.onClick(v);
+            boolean handledByNav = false;
             if (bottomNavigationView != null) {
-                bottomNavigationView.setSelectedItemId(R.id.action_review);
+                int currentSelected = bottomNavigationView.getSelectedItemId();
+                if (currentSelected != R.id.action_review) {
+                    bottomNavigationView.setSelectedItemId(R.id.action_review);
+                    handledByNav = true;
+                }
+            }
+            if (!handledByNav) {
+                openReview.onClick(v);
             }
         };
-        reviewCard.setOnClickListener(reviewClick);
+        if (reviewCard != null) {
+            reviewCard.setOnClickListener(reviewClick);
+        }
         if (alertView != null) {
             alertView.setOnClickListener(reviewClick);
         }
 
-        View.OnClickListener showStats = v -> showStatsDialog();
-        statsCard.setOnClickListener(v -> {
-            showStats.onClick(v);
+        View.OnClickListener showStats = v -> {
+            showSection(Section.STATS);
             if (bottomNavigationView != null) {
                 bottomNavigationView.setSelectedItemId(R.id.action_stats);
             }
-        });
+        };
+        statsCard.setOnClickListener(showStats);
 
         if (bottomNavigationView != null) {
             bottomNavigationView.setOnItemSelectedListener(item -> {
@@ -269,7 +347,7 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
                     openReview.onClick(bottomNavigationView);
                     return true;
                 } else if (id == R.id.action_stats) {
-                    showStatsDialog();
+                    showSection(Section.STATS);
                     return true;
                 } else if (id == R.id.action_logout) {
                     performLogout();
@@ -299,11 +377,6 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
         return subtitleView;
     }
 
-    private void setupStatCard(View card, String label) {
-        TextView labelView = card.findViewById(R.id.admin_stat_label);
-        labelView.setText(label);
-    }
-
     private void showSection(@NonNull Section section) {
         currentSection = section;
         if (userSectionView != null) {
@@ -312,86 +385,108 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
         if (recipeSectionView != null) {
             recipeSectionView.setVisibility(section == Section.RECIPES ? View.VISIBLE : View.GONE);
         }
+        if (statsSectionView != null) {
+            statsSectionView.setVisibility(section == Section.STATS ? View.VISIBLE : View.GONE);
+        }
         View anchor = section == Section.USERS
                 ? (userSectionView != null ? userSectionView : userListAnchor)
-                : (recipeSectionView != null ? recipeSectionView : recipeListAnchor);
+                : section == Section.RECIPES
+                ? (recipeSectionView != null ? recipeSectionView : recipeListAnchor)
+                : statsSectionView;
         if (scrollView != null && anchor != null) {
             scrollView.post(() -> scrollView.smoothScrollTo(0, anchor.getTop()));
         }
     }
 
-    private void showDeleteConfirmation(String email) {
+    private void showDeleteConfirmation(@Nullable String userId, @NonNull String email) {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.admin_user_delete)
                 .setMessage(getString(R.string.admin_confirm_delete_user, email))
-                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    accountManager.removeAccount(email);
-                    reloadData();
-                })
+                .setPositiveButton(android.R.string.ok, (dialog, which) ->
+                        performUserDeletion(userId, email))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 
-    private void reloadData() {
-        Map<String, UserAccount> allAccounts = accountManager.getAllAccounts();
-        Map<String, Integer> postCounts = buildPostCountMap();
-
-        String adminEmail = getString(R.string.admin_default_email).trim().toLowerCase(Locale.getDefault());
-
-        List<Map.Entry<String, UserAccount>> entries = new ArrayList<>(allAccounts.entrySet());
-        Collections.sort(entries, (left, right) -> {
-            long leftCreated = left.getValue() != null ? left.getValue().getCreatedAt() : 0L;
-            long rightCreated = right.getValue() != null ? right.getValue().getCreatedAt() : 0L;
-            return Long.compare(rightCreated, leftCreated);
-        });
-
-        List<AdminUserAdapter.Item> items = new ArrayList<>();
-        for (Map.Entry<String, UserAccount> entry : entries) {
-            String emailKey = entry.getKey();
-            if (TextUtils.isEmpty(emailKey)) {
-                continue;
-            }
-            String normalizedEmail = emailKey.trim().toLowerCase(Locale.getDefault());
-            if (normalizedEmail.equals(adminEmail)) {
-                continue;
-            }
-
-            UserAccount account = entry.getValue();
-            String displayEmail = !TextUtils.isEmpty(emailKey)
-                    ? emailKey
-                    : getString(R.string.admin_unknown_email);
-            String displayName = (account != null && !TextUtils.isEmpty(account.getName()))
-                    ? account.getName()
-                    : displayEmail;
-            if (TextUtils.isEmpty(displayName)) {
-                displayName = getString(R.string.admin_unknown_user);
-            }
-
-            String dateText;
-            if (account != null && account.getCreatedAt() > 0L) {
-                dateText = DATE_FORMAT.format(new Date(account.getCreatedAt()));
-            } else {
-                dateText = getString(R.string.admin_unknown_date);
-            }
-            int totalPosts = postCounts.getOrDefault(normalizedEmail, 0);
-            String meta = getString(R.string.admin_user_meta, dateText, totalPosts);
-
-            items.add(new AdminUserAdapter.Item(
-                    normalizedEmail,
-                    displayName,
-                    displayEmail,
-                    meta
-            ));
+    private void performUserDeletion(@Nullable String userId, @NonNull String email) {
+        if (TextUtils.isEmpty(userId)) {
+            Toast.makeText(this, R.string.admin_delete_user_offline, Toast.LENGTH_SHORT).show();
+            return;
         }
+        if (sessionManager == null) {
+            sessionManager = new SessionManager(this);
+        }
+        String token = sessionManager.getToken();
+        if (TextUtils.isEmpty(token)) {
+            Toast.makeText(this, R.string.admin_delete_token_missing, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (userApiService == null) {
+            Toast.makeText(this, R.string.admin_delete_user_failed_generic, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        userApiService.deleteUser("Bearer " + token, userId).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
+                if (response.isSuccessful()) {
+                    Toast.makeText(
+                            ManHinhQuanTriActivity.this,
+                            getString(R.string.admin_delete_user_success, email),
+                            Toast.LENGTH_SHORT
+                    ).show();
+                    reloadData();
+                } else {
+                    String message = response.message();
+                    try {
+                        if (response.errorBody() != null) {
+                            message = response.errorBody().string();
+                        }
+                    } catch (IOException ignored) {
+                    }
+                    Toast.makeText(
+                            ManHinhQuanTriActivity.this,
+                            getString(R.string.admin_delete_user_failed, message),
+                            Toast.LENGTH_SHORT
+                    ).show();
+                }
+            }
 
-        userAdapter.submitList(items);
-        totalUsers = items.size();
+            @Override
+            public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {
+                Toast.makeText(
+                        ManHinhQuanTriActivity.this,
+                        getString(R.string.admin_delete_user_failed, t.getMessage()),
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
+        });
+    }
 
+    private void reloadData() {
+        fetchUserStatsAndRecipes();
+    }
+
+    private void fetchUserStatsAndRecipes() {
+        updateRecipeSection();
+        currentPostStats = computePostStats();
+        loadUsersFromBackend();
+    }
+
+    private String getCurrentAdminEmailNormalized() {
+        String email = sessionManager != null ? sessionManager.getEmail() : null;
+        if (TextUtils.isEmpty(email)) {
+            CharSequence label = adminEmailView != null ? adminEmailView.getText() : null;
+            email = label != null ? label.toString() : getString(R.string.admin_default_email);
+        }
+        if (email == null) {
+            email = "";
+        }
+        return email.trim().toLowerCase(Locale.getDefault());
+    }
+
+    private void updateRecipeSection() {
         List<Recipe> recipes = RecipeRepository.getInstance().getRecipes();
         totalRecipes = recipes.size();
-        totalPending = countPendingRecipes();
-        int totalLikes = 0;
-
         if (recipeAdapter != null) {
             recipeAdapter.submitList(recipes);
         }
@@ -401,15 +496,203 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
         if (recipeEmptyView != null) {
             recipeEmptyView.setVisibility(recipes.isEmpty() ? View.VISIBLE : View.GONE);
         }
+    }
 
-        updateStatValue(statUsersView, totalUsers);
-        updateStatValue(statRecipesView, totalRecipes);
-        updateStatValue(statLikesView, totalLikes);
+    private Map<String, UserPostStats> computePostStats() {
+        Map<String, UserPostStats> stats = new HashMap<>();
+        totalUserPosts = 0;
+        totalApprovedPosts = 0;
+        totalPendingPosts = 0;
+        for (BanGhi record : baiChoDuyetStore.layTatCaBanGhi()) {
+            if (record == null || record.baiChoDuyet == null) {
+                continue;
+            }
+            String email = record.email;
+            if (TextUtils.isEmpty(email)) {
+                continue;
+            }
+            String normalized = email.trim().toLowerCase(Locale.getDefault());
+            UserPostStats stat = stats.get(normalized);
+            if (stat == null) {
+                stat = new UserPostStats();
+                stats.put(normalized, stat);
+            }
+            stat.total++;
+            totalUserPosts++;
+            if (record.baiChoDuyet.getTrangThai() == BaiChoDuyet.TrangThai.APPROVED) {
+                stat.approved++;
+                totalApprovedPosts++;
+            } else if (record.baiChoDuyet.getTrangThai() == BaiChoDuyet.TrangThai.PENDING) {
+                stat.pending++;
+                totalPendingPosts++;
+            }
+        }
+        totalPending = totalPendingPosts;
+        return stats;
+    }
+
+    private void loadUsersFromBackend() {
+        if (userApiService == null) {
+            applyLocalUsers();
+            return;
+        }
+        userApiService.getUsers().enqueue(new Callback<List<UserResponse>>() {
+            @Override
+            public void onResponse(@NonNull Call<List<UserResponse>> call,
+                                   @NonNull Response<List<UserResponse>> response) {
+                List<UserResponse> body = response.body();
+                if (response.isSuccessful() && body != null) {
+                    applyRemoteUsers(body);
+                } else {
+                    applyLocalUsers();
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<List<UserResponse>> call, @NonNull Throwable t) {
+                Toast.makeText(ManHinhQuanTriActivity.this,
+                        R.string.admin_user_load_error, Toast.LENGTH_SHORT).show();
+                applyLocalUsers();
+            }
+        });
+    }
+
+    private void applyRemoteUsers(@NonNull List<UserResponse> users) {
+        List<AdminUserAdapter.Item> refreshed = new ArrayList<>();
+        Map<String, UserAccount> accountMap = new HashMap<>();
+        String adminEmail = getCurrentAdminEmailNormalized();
+        for (UserResponse user : users) {
+            String rawEmail = user.getEmail();
+            if (TextUtils.isEmpty(rawEmail)) {
+                continue;
+            }
+            rawEmail = rawEmail.trim();
+            String normalized = rawEmail.toLowerCase(Locale.getDefault());
+            if (normalized.equals(adminEmail)) {
+                continue;
+            }
+            String displayName = TextUtils.isEmpty(user.getName()) ? rawEmail : user.getName();
+            long createdAtMillis = user.getCreatedAtMillis();
+            String dateText = createdAtMillis > 0
+                    ? DATE_FORMAT.format(new Date(createdAtMillis))
+                    : getString(R.string.admin_unknown_date);
+            int posts = 0;
+            UserPostStats stat = currentPostStats.get(normalized);
+            if (stat != null) {
+                posts = stat.total;
+            }
+            refreshed.add(new AdminUserAdapter.Item(
+                    user.getId(),
+                    normalized,
+                    displayName,
+                    rawEmail,
+                    getString(R.string.admin_user_meta, dateText, posts)
+            ));
+
+            UserAccount account = new UserAccount();
+            account.setName(displayName);
+            account.setCreatedAt(createdAtMillis > 0 ? createdAtMillis : System.currentTimeMillis());
+            accountMap.put(normalized, account);
+        }
+
+        currentUserAccounts.clear();
+        currentUserAccounts.putAll(accountMap);
+        totalUsers = refreshed.size();
+        userAdapter.submitList(refreshed);
+        if (userSummaryView != null) {
+            userSummaryView.setText(getString(R.string.admin_user_summary, totalUsers));
+        }
+        if (emptyView != null) {
+            emptyView.setVisibility(refreshed.isEmpty() ? View.VISIBLE : View.GONE);
+        }
+        finalizeDashboard();
+    }
+
+    private void applyLocalUsers() {
+        Map<String, UserAccount> allAccounts = new HashMap<>(accountManager.getAllAccounts());
+        List<Map.Entry<String, UserAccount>> entries = new ArrayList<>(allAccounts.entrySet());
+        Collections.sort(entries, (o1, o2) -> {
+            String email1 = o1.getKey() != null ? o1.getKey().toLowerCase(Locale.getDefault()) : "";
+            String email2 = o2.getKey() != null ? o2.getKey().toLowerCase(Locale.getDefault()) : "";
+            int total1 = currentPostStats.containsKey(email1) ? currentPostStats.get(email1).total : 0;
+            int total2 = currentPostStats.containsKey(email2) ? currentPostStats.get(email2).total : 0;
+            if (total1 == total2) {
+                return email1.compareTo(email2);
+            }
+            return Integer.compare(total2, total1);
+        });
+
+        List<AdminUserAdapter.Item> items = new ArrayList<>();
+        String adminEmail = getCurrentAdminEmailNormalized();
+        for (Map.Entry<String, UserAccount> entry : entries) {
+            String emailKey = entry.getKey();
+            if (TextUtils.isEmpty(emailKey)) {
+                continue;
+            }
+            String normalizedEmail = emailKey.trim().toLowerCase(Locale.getDefault());
+            if (normalizedEmail.equals(adminEmail)) {
+                continue;
+            }
+            UserAccount account = entry.getValue();
+            String displayName = account != null && !TextUtils.isEmpty(account.getName())
+                    ? account.getName()
+                    : emailKey;
+            String dateText = account != null && account.getCreatedAt() > 0
+                    ? DATE_FORMAT.format(new Date(account.getCreatedAt()))
+                    : getString(R.string.admin_unknown_date);
+            int totalPosts = 0;
+            UserPostStats stat = currentPostStats.get(normalizedEmail);
+            if (stat != null) {
+                totalPosts = stat.total;
+            }
+
+            items.add(new AdminUserAdapter.Item(
+                    null,
+                    normalizedEmail,
+                    displayName,
+                    emailKey,
+                    getString(R.string.admin_user_meta, dateText, totalPosts)
+            ));
+        }
+
+        currentUserAccounts.clear();
+        for (Map.Entry<String, UserAccount> entry : entries) {
+            if (TextUtils.isEmpty(entry.getKey())) {
+                continue;
+            }
+            String normalizedEmail = entry.getKey().trim().toLowerCase(Locale.getDefault());
+            currentUserAccounts.put(normalizedEmail, entry.getValue());
+        }
+
+        totalUsers = items.size();
+        userAdapter.submitList(items);
+        if (userSummaryView != null) {
+            userSummaryView.setText(getString(R.string.admin_user_summary, totalUsers));
+        }
+        if (emptyView != null) {
+            emptyView.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
+        }
+        finalizeDashboard();
+    }
+
+    private void finalizeDashboard() {
+        int activeUsers = totalUsers;
+        int lockedUsers = 0;
+        int totalLikes = 0;
+        updateOverviewAndDetail(
+                activeUsers,
+                lockedUsers,
+                totalRecipes,
+                totalUserPosts,
+                totalApprovedPosts,
+                totalPendingPosts,
+                totalLikes
+        );
+
+        String adminEmailNormalized = getCurrentAdminEmailNormalized();
+        updateTopUserCard(currentPostStats, currentUserAccounts, adminEmailNormalized);
         updateReviewSubtitle();
         updateStatsSubtitle();
-
-        userSummaryView.setText(getString(R.string.admin_user_summary, totalUsers));
-        emptyView.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
     private void updateReviewSubtitle() {
@@ -437,50 +720,132 @@ public class ManHinhQuanTriActivity extends AppCompatActivity {
         }
     }
 
-    private void updateStatValue(View card, int value) {
-        TextView valueView = card.findViewById(R.id.admin_stat_value);
-        valueView.setText(String.valueOf(value));
-    }
-
-    private int countPendingRecipes() {
-        int count = 0;
-        for (BanGhi record : baiChoDuyetStore.layTatCaBanGhi()) {
-            if (record.baiChoDuyet.getTrangThai() == BaiChoDuyet.TrangThai.PENDING) {
-                count++;
-            }
+    private void updateOverviewAndDetail(int activeUsers,
+                                         int lockedUsers,
+                                         int totalRecipesCount,
+                                         int totalUserPosts,
+                                         int totalApprovedPosts,
+                                         int totalPendingPosts,
+                                         int totalLikes) {
+        int totalUsersCount = activeUsers + lockedUsers;
+        if (overviewUsersValue != null) {
+            overviewUsersValue.setText(String.valueOf(totalUsersCount));
         }
-        return count;
+        if (overviewUsersSub != null) {
+            overviewUsersSub.setText(getString(R.string.admin_overview_users_sub, activeUsers, lockedUsers));
+        }
+        if (overviewContentValue != null) {
+            overviewContentValue.setText(String.valueOf(totalRecipesCount + totalUserPosts));
+        }
+        if (overviewContentSub != null) {
+            overviewContentSub.setText(getString(R.string.admin_overview_content_sub, totalRecipesCount, totalUserPosts));
+        }
+        if (overviewApprovedValue != null) {
+            overviewApprovedValue.setText(String.valueOf(totalRecipesCount + totalApprovedPosts));
+        }
+        if (overviewApprovedSub != null) {
+            overviewApprovedSub.setText(getString(R.string.admin_overview_status_sub, totalRecipesCount, totalApprovedPosts));
+        }
+        if (overviewPendingValue != null) {
+            overviewPendingValue.setText(String.valueOf(totalPendingPosts));
+        }
+        if (overviewPendingSub != null) {
+            overviewPendingSub.setText(getString(R.string.admin_overview_status_sub, 0, totalPendingPosts));
+        }
+
+        if (detailUsersTotalValue != null) {
+            detailUsersTotalValue.setText(String.valueOf(totalUsersCount));
+        }
+        if (detailUsersActiveValue != null) {
+            detailUsersActiveValue.setText(String.valueOf(activeUsers));
+        }
+        if (detailUsersLockedValue != null) {
+            detailUsersLockedValue.setText(String.valueOf(lockedUsers));
+        }
+        if (detailRecipesTotalValue != null) {
+            detailRecipesTotalValue.setText(String.valueOf(totalRecipesCount));
+        }
+        if (detailRecipesApprovedValue != null) {
+            detailRecipesApprovedValue.setText(String.valueOf(totalRecipesCount));
+        }
+        if (detailRecipesPendingValue != null) {
+            detailRecipesPendingValue.setText(String.valueOf(totalPendingPosts));
+        }
+        if (detailRecipesLikesValue != null) {
+            detailRecipesLikesValue.setText(String.valueOf(totalLikes));
+        }
+        if (detailPostsTotalValue != null) {
+            detailPostsTotalValue.setText(String.valueOf(totalUserPosts));
+        }
+        if (detailPostsApprovedValue != null) {
+            detailPostsApprovedValue.setText(String.valueOf(totalApprovedPosts));
+        }
+        if (detailPostsPendingValue != null) {
+            detailPostsPendingValue.setText(String.valueOf(totalPendingPosts));
+        }
     }
 
-    private Map<String, Integer> buildPostCountMap() {
-        Map<String, Integer> result = new HashMap<>();
-        for (BanGhi record : baiChoDuyetStore.layTatCaBanGhi()) {
-            String email = record.email;
-            if (TextUtils.isEmpty(email)) {
+    private void updateTopUserCard(Map<String, UserPostStats> postStats,
+                                   Map<String, UserAccount> allAccounts,
+                                   String adminEmail) {
+        if (topUserCard == null) {
+            return;
+        }
+        String topEmail = null;
+        UserPostStats topStats = null;
+        for (Map.Entry<String, UserPostStats> entry : postStats.entrySet()) {
+            String email = entry.getKey();
+            if (email.equals(adminEmail)) {
                 continue;
             }
-            String normalized = email.trim().toLowerCase(Locale.getDefault());
-            result.put(normalized, result.getOrDefault(normalized, 0) + 1);
+            UserPostStats stats = entry.getValue();
+            if (stats.total <= 0) {
+                continue;
+            }
+            if (topStats == null || stats.total > topStats.total) {
+                topStats = stats;
+                topEmail = email;
+            }
         }
-        return result;
+        if (topStats == null || topStats.total <= 0) {
+            topUserCard.setVisibility(View.GONE);
+            return;
+        }
+
+        topUserCard.setVisibility(View.VISIBLE);
+        if (topUserRankView != null) {
+            topUserRankView.setText("1");
+        }
+        String displayEmail = topEmail;
+        String displayName = displayEmail;
+        UserAccount account = allAccounts.get(topEmail);
+        if (account != null && !TextUtils.isEmpty(account.getName())) {
+            displayName = account.getName();
+        }
+        if (topUserNameView != null) {
+            topUserNameView.setText(displayName);
+        }
+        if (topUserEmailView != null) {
+            topUserEmailView.setText(displayEmail);
+        }
+        if (topUserTotalView != null) {
+            topUserTotalView.setText(getString(R.string.admin_top_user_total, topStats.total));
+        }
+        if (topUserStatsView != null) {
+            topUserStatsView.setText(getString(R.string.admin_top_user_stats, topStats.approved, topStats.pending));
+        }
     }
 
-    private void showStatsDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.admin_action_stats_title)
-                .setMessage(getString(
-                        R.string.admin_stats_message,
-                        totalUsers,
-                        totalRecipes,
-                        totalPending
-                ))
-                .setPositiveButton(android.R.string.ok, null)
-                .show();
+    private static class UserPostStats {
+        int total;
+        int approved;
+        int pending;
     }
 
     private enum Section {
         USERS,
-        RECIPES
+        RECIPES,
+        STATS
     }
 }
 

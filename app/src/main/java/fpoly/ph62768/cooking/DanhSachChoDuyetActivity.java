@@ -2,26 +2,38 @@ package fpoly.ph62768.cooking;
 
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.Toast;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import fpoly.ph62768.cooking.data.BaiChoDuyetStore;
-import fpoly.ph62768.cooking.data.RecipeRepository;
+import fpoly.ph62768.cooking.auth.SessionManager;
+import fpoly.ph62768.cooking.data.remote.PendingRecipeRepository;
+import fpoly.ph62768.cooking.data.remote.dto.PendingRecipeResponse;
 import fpoly.ph62768.cooking.model.BaiChoDuyet;
 import fpoly.ph62768.cooking.ui.BaiChoDuyetAdapter;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class DanhSachChoDuyetActivity extends AppCompatActivity {
 
@@ -36,20 +48,24 @@ public class DanhSachChoDuyetActivity extends AppCompatActivity {
         REJECTED
     }
 
-    private BaiChoDuyetStore baiChoDuyetStore;
     private BaiChoDuyetAdapter adapter;
     private String currentUserEmail = "";
     private String filterEmail = "";
     private StatusFilter statusFilter = StatusFilter.PENDING;
     private TextView emptyView;
     private ChipGroup filterChipGroup;
+    private View progressView;
+    private PendingRecipeRepository pendingRecipeRepository;
+    private SessionManager sessionManager;
+    private Call<List<PendingRecipeResponse>> currentCall;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_danh_sach_bai_cho);
 
-        baiChoDuyetStore = new BaiChoDuyetStore(this);
+        pendingRecipeRepository = new PendingRecipeRepository();
+        sessionManager = new SessionManager(this);
 
         currentUserEmail = getIntent().getStringExtra(EXTRA_USER_EMAIL);
         if (currentUserEmail == null) {
@@ -70,37 +86,62 @@ public class DanhSachChoDuyetActivity extends AppCompatActivity {
 
         ImageButton backButton = findViewById(R.id.danh_sach_quay_lai);
         emptyView = findViewById(R.id.danh_sach_trong);
+        progressView = findViewById(R.id.danh_sach_progress);
         RecyclerView recyclerView = findViewById(R.id.danh_sach_recycler);
         filterChipGroup = findViewById(R.id.danh_sach_filter_chip_group);
 
         backButton.setOnClickListener(v -> onBackPressed());
 
-        adapter = new BaiChoDuyetAdapter();
         boolean cheDoQuanTri = laCheDoQuanTri();
+        adapter = new BaiChoDuyetAdapter();
         adapter.setHienThiHanhDong(cheDoQuanTri);
-        if (cheDoQuanTri) {
-            adapter.setListener(new BaiChoDuyetAdapter.Listener() {
-                @Override
-                public void onApprove(@NonNull BaiChoDuyetAdapter.Item item) {
-                    xuLyCapNhatTrangThai(item, BaiChoDuyet.TrangThai.APPROVED, R.string.pending_action_approve_success);
+        adapter.setListener(new BaiChoDuyetAdapter.Listener() {
+            @Override
+            public void onApprove(@NonNull BaiChoDuyetAdapter.Item item) {
+                if (!cheDoQuanTri) {
+                    return;
                 }
+                xuLyCapNhatTrangThai(item, BaiChoDuyet.TrangThai.APPROVED, R.string.pending_action_approve_success, null);
+            }
 
-                @Override
-                public void onReject(@NonNull BaiChoDuyetAdapter.Item item) {
-                    xuLyCapNhatTrangThai(item, BaiChoDuyet.TrangThai.REJECTED, R.string.pending_action_reject_success);
+            @Override
+            public void onReject(@NonNull BaiChoDuyetAdapter.Item item) {
+                if (!cheDoQuanTri) {
+                    return;
                 }
+                showRejectReasonDialog(item);
+            }
 
-                @Override
-                public void onDelete(@NonNull BaiChoDuyetAdapter.Item item) {
-                    if (TextUtils.isEmpty(item.email)) {
-                        return;
+            @Override
+            public void onDelete(@NonNull BaiChoDuyetAdapter.Item item) {
+                String token = sessionManager.getToken();
+                if (TextUtils.isEmpty(token)) {
+                    Toast.makeText(DanhSachChoDuyetActivity.this, R.string.admin_delete_token_missing, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                showLoading(true);
+                pendingRecipeRepository.delete(token, item.recipe.getId()).enqueue(new Callback<Void>() {
+                    @Override
+                    public void onResponse(@NonNull Call<Void> call, @NonNull Response<Void> response) {
+                        showLoading(false);
+                        if (response.isSuccessful()) {
+                Toast.makeText(DanhSachChoDuyetActivity.this, R.string.pending_action_delete_success, Toast.LENGTH_SHORT).show();
+                taiDanhSach();
+                        } else {
+                            Toast.makeText(DanhSachChoDuyetActivity.this, R.string.distributor_error_api, Toast.LENGTH_SHORT).show();
+                        }
                     }
-                    baiChoDuyetStore.xoaBai(item.email, item.recipe.getId());
-                    Toast.makeText(DanhSachChoDuyetActivity.this, R.string.pending_action_delete_success, Toast.LENGTH_SHORT).show();
-                    taiDanhSach();
-                }
-            });
-        }
+
+                    @Override
+                    public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {
+                        showLoading(false);
+                        if (!call.isCanceled()) {
+                            Toast.makeText(DanhSachChoDuyetActivity.this, R.string.distributor_error_api, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+            }
+        });
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
 
@@ -125,50 +166,59 @@ public class DanhSachChoDuyetActivity extends AppCompatActivity {
     }
 
     private void taiDanhSach() {
-        List<BaiChoDuyetAdapter.Item> items = new ArrayList<>();
-
-        if (!TextUtils.isEmpty(filterEmail)) {
-            for (BaiChoDuyet item : baiChoDuyetStore.layDanhSachChoDuyet(filterEmail)) {
-                if (shouldInclude(item.getTrangThai())) {
-                    items.add(new BaiChoDuyetAdapter.Item(filterEmail, item));
-                }
-            }
-        } else if (!TextUtils.isEmpty(currentUserEmail)) {
-            for (BaiChoDuyet item : baiChoDuyetStore.layDanhSachChoDuyet(currentUserEmail)) {
-                if (shouldInclude(item.getTrangThai())) {
-                    items.add(new BaiChoDuyetAdapter.Item(currentUserEmail, item));
-                }
-            }
-        } else {
-            for (BaiChoDuyetStore.BanGhi record : baiChoDuyetStore.layTatCaBanGhi()) {
-                if (shouldInclude(record.baiChoDuyet.getTrangThai())) {
-                    items.add(new BaiChoDuyetAdapter.Item(record.email, record.baiChoDuyet));
-                }
-            }
+        if (currentCall != null) {
+            currentCall.cancel();
         }
+        String token = sessionManager.getToken();
+        if (TextUtils.isEmpty(token)) {
+            Toast.makeText(this, R.string.admin_delete_token_missing, Toast.LENGTH_SHORT).show();
+            adapter.capNhatDanhSach(new ArrayList<>());
+            emptyView.setVisibility(View.VISIBLE);
+            return;
+        }
+        showLoading(true);
+        String statusQuery = statusFilter == StatusFilter.ALL ? null : statusFilter.name();
+        String authorParam = !TextUtils.isEmpty(filterEmail)
+                ? filterEmail
+                : (!TextUtils.isEmpty(currentUserEmail) ? currentUserEmail : null);
+        currentCall = pendingRecipeRepository.getPendingRecipes(token, statusQuery, authorParam);
+        currentCall.enqueue(new Callback<List<PendingRecipeResponse>>() {
+            @Override
+            public void onResponse(@NonNull Call<List<PendingRecipeResponse>> call,
+                                   @NonNull Response<List<PendingRecipeResponse>> response) {
+                showLoading(false);
+                if (response.isSuccessful() && response.body() != null) {
+        List<BaiChoDuyetAdapter.Item> items = new ArrayList<>();
+                    for (PendingRecipeResponse pending : response.body()) {
+                        BaiChoDuyet mapped = mapPendingRecipe(pending);
+                        if (mapped != null) {
+                            items.add(new BaiChoDuyetAdapter.Item(pending.getAuthorEmail(), mapped));
+                        }
+                    }
+                    adapter.capNhatDanhSach(items);
+                    emptyView.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
+                } else {
+                    adapter.capNhatDanhSach(new ArrayList<>());
+                    emptyView.setVisibility(View.VISIBLE);
+                    Toast.makeText(DanhSachChoDuyetActivity.this, R.string.distributor_error_api, Toast.LENGTH_SHORT).show();
+                }
+            }
 
-        Collections.sort(items, (left, right) ->
-                Long.compare(right.recipe.getThoiGianTao(), left.recipe.getThoiGianTao()));
-
-        adapter.capNhatDanhSach(items);
-        emptyView.setVisibility(items.isEmpty() ? android.view.View.VISIBLE : android.view.View.GONE);
+            @Override
+            public void onFailure(@NonNull Call<List<PendingRecipeResponse>> call, @NonNull Throwable t) {
+                if (call.isCanceled()) {
+                    return;
+                }
+                showLoading(false);
+                adapter.capNhatDanhSach(new ArrayList<>());
+                emptyView.setVisibility(View.VISIBLE);
+                Toast.makeText(DanhSachChoDuyetActivity.this, getString(R.string.distributor_error_api), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private boolean laCheDoQuanTri() {
-        return TextUtils.isEmpty(filterEmail) && TextUtils.isEmpty(currentUserEmail);
-    }
-
-    private boolean shouldInclude(BaiChoDuyet.TrangThai trangThai) {
-        if (statusFilter == StatusFilter.ALL) {
-            return true;
-        }
-        if (statusFilter == StatusFilter.PENDING) {
-            return trangThai == BaiChoDuyet.TrangThai.PENDING;
-        }
-        if (statusFilter == StatusFilter.APPROVED) {
-            return trangThai == BaiChoDuyet.TrangThai.APPROVED;
-        }
-        return trangThai == BaiChoDuyet.TrangThai.REJECTED;
+        return sessionManager != null && sessionManager.isAdmin();
     }
 
     private StatusFilter mapChipToFilter(int chipId) {
@@ -200,17 +250,163 @@ public class DanhSachChoDuyetActivity extends AppCompatActivity {
 
     private void xuLyCapNhatTrangThai(@NonNull BaiChoDuyetAdapter.Item item,
                                       @NonNull BaiChoDuyet.TrangThai trangThai,
-                                      int thongBaoRes) {
+                                      int thongBaoRes,
+                                      @Nullable String rejectionReason) {
         if (TextUtils.isEmpty(item.email)) {
             return;
         }
-        baiChoDuyetStore.capNhatTrangThaiToanCuc(item.email, item.recipe.getId(), trangThai);
-        if (trangThai == BaiChoDuyet.TrangThai.APPROVED) {
-            RecipeRepository.getInstance().addUserRecipe(item.recipe);
+        String token = sessionManager.getToken();
+        if (TextUtils.isEmpty(token)) {
+            Toast.makeText(this, R.string.admin_delete_token_missing, Toast.LENGTH_SHORT).show();
+            return;
         }
-        Toast.makeText(this, thongBaoRes, Toast.LENGTH_SHORT).show();
+        Call<PendingRecipeResponse> call = trangThai == BaiChoDuyet.TrangThai.APPROVED
+                ? pendingRecipeRepository.approve(token, item.recipe.getId())
+                : pendingRecipeRepository.reject(token, item.recipe.getId(), rejectionReason);
+        showLoading(true);
+        call.enqueue(new Callback<PendingRecipeResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<PendingRecipeResponse> call, @NonNull Response<PendingRecipeResponse> response) {
+                showLoading(false);
+                if (response.isSuccessful()) {
+                    Toast.makeText(DanhSachChoDuyetActivity.this, thongBaoRes, Toast.LENGTH_SHORT).show();
         taiDanhSach();
+                } else {
+                    Toast.makeText(DanhSachChoDuyetActivity.this, R.string.distributor_error_api, Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<PendingRecipeResponse> call, @NonNull Throwable t) {
+                showLoading(false);
+                if (!call.isCanceled()) {
+                    Toast.makeText(DanhSachChoDuyetActivity.this, R.string.distributor_error_api, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+
+    private void showRejectReasonDialog(@NonNull BaiChoDuyetAdapter.Item item) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_reject_reason, null);
+        RadioGroup reasonGroup = dialogView.findViewById(R.id.reject_reason_group);
+        TextInputLayout reasonInputLayout = dialogView.findViewById(R.id.reject_reason_input_layout);
+        TextInputEditText reasonInput = dialogView.findViewById(R.id.reject_reason_input);
+
+        reasonGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.reject_reason_other) {
+                reasonInputLayout.setVisibility(View.VISIBLE);
+                if (reasonInput != null) {
+                    reasonInput.requestFocus();
+                }
+            } else {
+                reasonInputLayout.setVisibility(View.GONE);
+                reasonInputLayout.setError(null);
+            }
+        });
+
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.pending_reject_dialog_title)
+                .setView(dialogView)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.pending_reject_confirm, null);
+
+        final AlertDialog dialog = builder.create();
+        dialog.setOnShowListener(d -> {
+            Button positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            positive.setOnClickListener(v -> {
+                int selectedId = reasonGroup.getCheckedRadioButtonId();
+                if (selectedId == View.NO_ID) {
+                    Toast.makeText(this, R.string.pending_reject_reason_required, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                String reasonText;
+                if (selectedId == R.id.reject_reason_other) {
+                    String custom = reasonInput != null && reasonInput.getText() != null
+                            ? reasonInput.getText().toString().trim()
+                            : "";
+                    if (custom.isEmpty()) {
+                        reasonInputLayout.setError(getString(R.string.pending_reject_reason_required));
+                        if (reasonInput != null) {
+                            reasonInput.requestFocus();
+                        }
+                        return;
+                    }
+                    reasonInputLayout.setError(null);
+                    reasonText = custom;
+                } else {
+                    RadioButton selectedButton = dialogView.findViewById(selectedId);
+                    reasonText = selectedButton != null ? selectedButton.getText().toString() : "";
+                }
+                if (TextUtils.isEmpty(reasonText)) {
+                    Toast.makeText(this, R.string.pending_reject_reason_required, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                dialog.dismiss();
+                xuLyCapNhatTrangThai(item, BaiChoDuyet.TrangThai.REJECTED, R.string.pending_action_reject_success, reasonText);
+            });
+        });
+        dialog.show();
+    }
+
+    private BaiChoDuyet mapPendingRecipe(PendingRecipeResponse response) {
+        if (response == null || TextUtils.isEmpty(response.getId())) {
+            return null;
+        }
+        BaiChoDuyet.TrangThai trangThai;
+        try {
+            trangThai = BaiChoDuyet.TrangThai.valueOf(response.getStatus());
+        } catch (IllegalArgumentException ex) {
+            trangThai = BaiChoDuyet.TrangThai.PENDING;
+        }
+        return new BaiChoDuyet(
+                response.getId(),
+                response.getName() != null ? response.getName() : "",
+                response.getDuration() != null ? response.getDuration() : "",
+                response.getDescription() != null ? response.getDescription() : "",
+                response.getImageUrl() != null ? response.getImageUrl() : "",
+                convertStepsToContent(response),
+                response.getCreatedAtMillis(),
+                0f,
+                trangThai
+        );
+    }
+
+    private String convertStepsToContent(PendingRecipeResponse response) {
+        if (response.getSteps() == null || response.getSteps().isEmpty()) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < response.getSteps().size(); i++) {
+            String description = response.getSteps().get(i).getDescription();
+            String image = response.getSteps().get(i).getImageUrl();
+            if (description == null || description.trim().isEmpty()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append('\n');
+            }
+            builder.append(description.trim());
+            if (image != null && !image.trim().isEmpty()) {
+                builder.append("<<<").append(image.trim());
+            }
+        }
+        return builder.toString();
+    }
+
+    private void showLoading(boolean loading) {
+        if (progressView != null) {
+            progressView.setVisibility(loading ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (currentCall != null) {
+            currentCall.cancel();
+        }
     }
 }
+
 
 
