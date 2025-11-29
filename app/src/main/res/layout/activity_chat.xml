@@ -6,9 +6,8 @@
     android:layout_height="match_parent"
     android:background="#FFF5EC"
     tools:context=".TinNhanActivity">
-
-
-
+    
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
