@@ -46,6 +46,7 @@
                     android:textStyle="bold"
                     tools:text="Nhắn tin với Minh Anh" />
 
+
                 <TextView
                     android:id="@+id/chat_subtitle"
                     android:layout_width="wrap_content"
@@ -55,6 +56,8 @@
                     android:textColor="#FFE5D3"
                     android:textSize="12sp"
                     tools:text="Trò chuyện riêng tư" />
+
+<!--                skkn-->
             </LinearLayout>
         </LinearLayout>
 
