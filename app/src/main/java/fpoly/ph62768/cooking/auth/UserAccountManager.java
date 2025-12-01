@@ -11,6 +11,8 @@ import com.google.gson.JsonSyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
+import fpoly.ph62768.cooking.ui.ChinhSuaHoSoActivity;
+
 public class UserAccountManager {
 
     private static final String PREFS_NAME = "user_accounts";
@@ -149,6 +151,11 @@ public class UserAccountManager {
         return email == null ? "" : email.trim().toLowerCase();
     }
 
+    public boolean updateAccount(UserAccount account) {
+        // Logic cập nhật account
+        return false;
+    }
+
     private void ensureDefaults(UserAccount account) {
         if (account.getName() == null) {
             account.setName("");
@@ -159,6 +166,11 @@ public class UserAccountManager {
         if (account.getCreatedAt() == 0L) {
             account.setCreatedAt(System.currentTimeMillis());
         }
+    }
+
+    public String getCurrentUserName(@NonNull Context context) {
+        return context.getSharedPreferences("session", Context.MODE_PRIVATE)
+                .getString("current_user_name", "");
     }
 }
 

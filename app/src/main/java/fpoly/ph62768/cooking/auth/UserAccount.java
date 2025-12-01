@@ -7,7 +7,22 @@ public class UserAccount {
     private String password;
     private long createdAt;
     // Constructors
+    private String phone;
+    private String bio;
+    private String address;
+    private String website;
+    private String avatarUrl;
 
+    public UserAccount(String name, String password, long createdAt, String phone, String bio, String address, String website, String avatarUrl) {
+        this.name = name;
+        this.password = password;
+        this.createdAt = createdAt;
+        this.phone = phone;
+        this.bio = bio;
+        this.address = address;
+        this.website = website;
+        this.avatarUrl = avatarUrl;
+    }
 
     public UserAccount() {
     }
@@ -45,6 +60,46 @@ public class UserAccount {
 
     public void setCreatedAt(long createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getWebsite() {
+        return website;
+    }
+
+    public void setWebsite(String website) {
+        this.website = website;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 }
 

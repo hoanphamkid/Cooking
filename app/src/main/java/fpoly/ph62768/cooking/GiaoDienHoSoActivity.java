@@ -9,6 +9,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
@@ -16,14 +18,22 @@ import fpoly.ph62768.cooking.RecipeCollectionActivity.CollectionType;
 import fpoly.ph62768.cooking.auth.UserAccount;
 import fpoly.ph62768.cooking.auth.UserAccountManager;
 import fpoly.ph62768.cooking.data.BaiChoDuyetStore;
+import fpoly.ph62768.cooking.ui.ChinhSuaHoSoActivity;
 
 public class GiaoDienHoSoActivity extends AppCompatActivity {
 
+    private static final int REQUEST_EDIT_PROFILE = 1001;
     private String currentUserEmail = "";
     private String currentUserName = "";
     private BaiChoDuyetStore baiChoDuyetStore;
     private TextView pendingBadgeView;
     private TextView pendingNoticeView;
+
+    private TextView nameText;
+    private TextView emailText;
+    private ImageView avatarImage;
+
+    private ActivityResultLauncher<Intent> editProfileLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,6 +42,8 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
         setContentView(R.layout.giao_dien_ho_so);
 
         Intent intent = getIntent();
+
+
         if (intent != null) {
             String email = intent.getStringExtra(GiaoDienTrangChuActivity.EXTRA_USER_EMAIL);
             if (email != null) {
@@ -44,24 +56,21 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
         }
 
         baiChoDuyetStore = new BaiChoDuyetStore(this);
-
+        nameText = findViewById(R.id.profile_name);
+        emailText = findViewById(R.id.profile_email);
         ImageButton backButton = findViewById(R.id.profile_back_button);
         backButton.setOnClickListener(v -> onBackPressed());
-
-        ImageView avatarImage = findViewById(R.id.profile_avatar);
+        avatarImage = findViewById(R.id.profile_avatar);
         Glide.with(this)
                 .load("https://images.unsplash.com/photo-1524504388940-b1c1722653e1")
                 .placeholder(R.drawable.ic_profile_placeholder)
                 .circleCrop()
                 .into(avatarImage);
 
-        LinearLayout editProfileButton = findViewById(R.id.profile_edit_button);
-        editProfileButton.setOnClickListener(v ->
-                Toast.makeText(this, "Chức năng chỉnh sửa hồ sơ đang phát triển", Toast.LENGTH_SHORT).show()
-        );
 
-        TextView nameText = findViewById(R.id.profile_name);
-        TextView emailText = findViewById(R.id.profile_email);
+
+
+
         UserAccountManager accountManager = new UserAccountManager(this);
         UserAccount account = accountManager.getAccount(currentUserEmail);
         if (currentUserName == null || currentUserName.trim().isEmpty()) {
@@ -78,6 +87,17 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
             emailText.setText(currentUserEmail);
         }
 
+        editProfileLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        // Reload user data sau khi chỉnh sửa thành công
+                        loadUserData();
+                        Toast.makeText(this, "Hồ sơ đã được cập nhật", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
+
         setupRows(accountManager);
 
         LinearLayout tabHome = findViewById(R.id.profile_tab_home);
@@ -90,6 +110,7 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
         LinearLayout favoriteRow = findViewById(R.id.profile_favorite_row);
         LinearLayout settingsRow = findViewById(R.id.profile_settings_row);
         LinearLayout helpRow = findViewById(R.id.profile_help_row);
+        LinearLayout editProfileButton = findViewById(R.id.profile_edit_button);
         pendingBadgeView = findViewById(R.id.profile_pending_badge);
         pendingNoticeView = findViewById(R.id.profile_pending_notice);
 
@@ -135,6 +156,14 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
                 startActivity(new Intent(this, HelpActivity.class))
         );
 
+        editProfileButton.setOnClickListener(v -> {
+            Intent editintent = new Intent(this, ChinhSuaHoSoActivity.class);
+            editintent.putExtra(GiaoDienTrangChuActivity.EXTRA_USER_EMAIL, currentUserEmail);
+            startActivityForResult(editintent, REQUEST_EDIT_PROFILE);
+        });
+
+
+
         updatePendingState();
         selectBottomTab(ProfileTab.PROFILE);
     }
@@ -143,6 +172,74 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         updatePendingState();
+    }
+
+
+    private void loadUserData() {
+        UserAccountManager accountManager = new UserAccountManager(this);
+        UserAccount account = accountManager.getAccount(currentUserEmail);
+
+        if (account != null) {
+            // Cập nhật tên hiển thị
+            String displayName = account.getName() != null && !account.getName().trim().isEmpty()
+                    ? account.getName()
+                    : currentUserName;
+
+            if (displayName == null || displayName.trim().isEmpty()) {
+                displayName = getString(R.string.profile_user_name);
+            }
+
+            currentUserName = displayName;
+
+            if (nameText != null) {
+                nameText.setText(currentUserName);
+            }
+
+            // Cập nhật email
+            if (emailText != null && currentUserEmail != null && !currentUserEmail.isEmpty()) {
+                emailText.setText(currentUserEmail);
+            }
+
+            // Cập nhật avatar
+            if (avatarImage != null) {
+                String avatarUrl = account.getAvatarUrl();
+                if (avatarUrl != null && !avatarUrl.isEmpty()) {
+                    Glide.with(this)
+                            .load(avatarUrl)
+                            .placeholder(R.drawable.ic_profile_placeholder)
+                            .circleCrop()
+                            .into(avatarImage);
+                } else {
+                    // Load avatar mặc định
+                    Glide.with(this)
+                            .load("https://images.unsplash.com/photo-1524504388940-b1c1722653e1")
+                            .placeholder(R.drawable.ic_profile_placeholder)
+                            .circleCrop()
+                            .into(avatarImage);
+                }
+            }
+        } else {
+            // Nếu không có account, load dữ liệu mặc định
+            if (currentUserName == null || currentUserName.trim().isEmpty()) {
+                currentUserName = getString(R.string.profile_user_name);
+            }
+
+            if (nameText != null) {
+                nameText.setText(currentUserName);
+            }
+
+            if (emailText != null && currentUserEmail != null && !currentUserEmail.isEmpty()) {
+                emailText.setText(currentUserEmail);
+            }
+
+            if (avatarImage != null) {
+                Glide.with(this)
+                        .load("https://images.unsplash.com/photo-1524504388940-b1c1722653e1")
+                        .placeholder(R.drawable.ic_profile_placeholder)
+                        .circleCrop()
+                        .into(avatarImage);
+            }
+        }
     }
 
     private enum ProfileTab {
