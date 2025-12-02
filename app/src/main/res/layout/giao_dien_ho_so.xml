@@ -469,7 +469,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_nav_home"
-                    android:tint="@color/bottom_nav_inactive" />
+                    app:tint="@color/bottom_nav_inactive" />
 
                 <TextView
                     android:id="@+id/profile_tab_home_label"
@@ -495,7 +495,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_nav_fire"
-                    android:tint="@color/bottom_nav_inactive" />
+                    app:tint="@color/bottom_nav_inactive" />
 
                 <TextView
                     android:id="@+id/profile_tab_hot_label"
@@ -521,7 +521,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_nav_shuffle"
-                    android:tint="@color/bottom_nav_inactive" />
+                    app:tint="@color/bottom_nav_inactive" />
 
                 <TextView
                     android:id="@+id/profile_tab_random_label"
@@ -547,7 +547,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_nav_profile"
-                    android:tint="@color/bottom_nav_active" />
+                    app:tint="@color/bottom_nav_active" />
 
                 <TextView
                     android:id="@+id/profile_tab_profile_label"

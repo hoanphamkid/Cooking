@@ -113,6 +113,7 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
         LinearLayout editProfileButton = findViewById(R.id.profile_edit_button);
         pendingBadgeView = findViewById(R.id.profile_pending_badge);
         pendingNoticeView = findViewById(R.id.profile_pending_notice);
+        editProfileLauncher = findViewById(R.id.profile)
 
         tabHome.setOnClickListener(v -> {
             selectBottomTab(ProfileTab.HOME);
