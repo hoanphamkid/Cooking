@@ -120,7 +120,7 @@
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_profile_edit"
-                        android:tint="@android:color/white" />
+                        app:tint="@android:color/white" />
 
                     <TextView
                         android:id="@+id/profile_edit_label"
