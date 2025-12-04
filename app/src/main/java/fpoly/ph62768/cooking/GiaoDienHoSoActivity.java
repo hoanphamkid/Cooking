@@ -18,7 +18,6 @@ import fpoly.ph62768.cooking.RecipeCollectionActivity.CollectionType;
 import fpoly.ph62768.cooking.auth.UserAccount;
 import fpoly.ph62768.cooking.auth.UserAccountManager;
 import fpoly.ph62768.cooking.data.BaiChoDuyetStore;
-import fpoly.ph62768.cooking.ui.ChinhSuaHoSoActivity;
 
 public class GiaoDienHoSoActivity extends AppCompatActivity {
 

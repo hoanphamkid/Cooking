@@ -11,8 +11,6 @@ import com.google.gson.JsonSyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
-import fpoly.ph62768.cooking.ui.ChinhSuaHoSoActivity;
-
 public class UserAccountManager {
 
     private static final String PREFS_NAME = "user_accounts";
