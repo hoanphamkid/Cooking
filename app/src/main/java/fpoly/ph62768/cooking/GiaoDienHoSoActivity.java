@@ -131,8 +131,8 @@ public class GiaoDienHoSoActivity extends AppCompatActivity {
         });
 
         tabRandom.setOnClickListener(v -> {
-            selectBottomTab(ProfileTab.RANDOM);
-            Toast.makeText(this, "Tính năng đang phát triển", Toast.LENGTH_SHORT).show();
+            Intent intent2ran = new Intent(GiaoDienHoSoActivity.this, TabRandomActivity.class);
+            startActivity(intent2ran);
         });
 
         tabProfile.setOnClickListener(v -> selectBottomTab(ProfileTab.PROFILE));
