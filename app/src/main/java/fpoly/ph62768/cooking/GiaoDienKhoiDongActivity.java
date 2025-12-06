@@ -9,7 +9,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class GiaoDienKhoiDongActivity extends AppCompatActivity {
 
-    private static final long SPLASH_DURATION_MS = 3000L;
+    private static final long SPLASH_DURATION_MS = 2000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
